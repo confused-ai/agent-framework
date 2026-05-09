@@ -40,9 +40,9 @@ import {
     type EvalDatasetItem,
     type EvalReport,
     type EvalScorer,
-} from '../src/observability/eval-store.js';
-import { createAgent } from '../src/create-agent.js';
-import { MockLLMProvider } from '../src/testing/mock-llm.js';
+} from 'confused-ai';
+import { createAgent } from 'confused-ai';
+import { MockLLMProvider } from '@confused-ai/test-utils';
 
 // ── Golden dataset ─────────────────────────────────────────────────────────
 // In production: load from JSON, CSV, or a database

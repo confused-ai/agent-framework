@@ -2,7 +2,64 @@
 
 > Every package is independently publishable, tree-shakeable, and follows SOLID principles with O(1) data structures where applicable.
 
-## Package Overview
+## Package Inventory with Domain & Status
+
+| Package | Domain | Status | Allowed Imports |
+|---------|--------|--------|-----------------|
+| `@confused-ai/contracts` | Foundation | Stable | None (zero-dependency) |
+| `@confused-ai/guard` | Foundation | Stable | contracts, shared |
+| `@confused-ai/shared` | Foundation | Stable | None (zero-dependency) |
+| `@confused-ai/core` | Runtime | Stable | contracts, guard, shared |
+| `@confused-ai/agentic` | Runtime | Stable | contracts, core, guard, observe, shared |
+| `@confused-ai/graph` | Runtime | Stable | contracts, core, guard, observe, shared |
+| `@confused-ai/workflow` | Runtime | Stable | contracts, core, agentic, graph, observe, shared |
+| `@confused-ai/execution` | Runtime | Stable | contracts, core, graph, guard, observe, shared |
+| `@confused-ai/orchestration` | Runtime | Stable | contracts, core, agentic, graph, execution, workflow, observe, shared |
+| `@confused-ai/planner` | Runtime | Stable | contracts, core, observe, shared |
+| `@confused-ai/reasoning` | Runtime | Stable | contracts, core, guard, observe, shared |
+| `@confused-ai/compression` | Extensions | Experimental | contracts, shared |
+| `@confused-ai/models` | Providers | Stable | contracts, guard, observe, shared |
+| `@confused-ai/router` | Providers | Stable | contracts, models, observe, shared |
+| `@confused-ai/session` | State | Stable | contracts, guard, observe, shared |
+| `@confused-ai/db` | State | Stable | contracts, guard, observe, shared |
+| `@confused-ai/adapter-redis` | State | Stable | contracts, session, guard, observe, shared |
+| `@confused-ai/storage` | State | Stable | contracts, shared |
+| `@confused-ai/memory` | State | Stable | contracts, observe, shared |
+| `@confused-ai/knowledge` | State | Stable | contracts, memory, observe, shared |
+| `@confused-ai/learning` | State | Experimental | contracts, memory, observe, shared |
+| `@confused-ai/artifacts` | State | Stable | contracts, observe, shared |
+| `@confused-ai/tools` | Tools | Stable | contracts, guard, observe, shared |
+| `@confused-ai/guardrails` | Platform | Stable | contracts, guard, observe, shared |
+| `@confused-ai/production` | Platform | Stable | contracts, core, guard, db, observe, shared |
+| `@confused-ai/observe` | Platform | Stable | contracts, shared |
+| `@confused-ai/serve` | Platform | Stable | contracts, core, production, guard, observe, shared |
+| `@confused-ai/config` | Platform | Stable | contracts, observe, shared |
+| `@confused-ai/eval` | Platform | Stable | contracts, core, observe, shared |
+| `@confused-ai/background` | Platform | Stable | contracts, guard, observe, shared |
+| `@confused-ai/scheduler` | Platform | Stable | contracts, core, db, guard, observe, shared |
+| `@confused-ai/context` | Platform | Stable | contracts, compression, core, memory, observe, shared |
+| `@confused-ai/cli` | Developer | Stable | contracts, core, observe, shared |
+| `@confused-ai/sdk` | Developer | Stable | all runtime/provider layers (facade) |
+| `@confused-ai/test-utils` | Developer | Stable | contracts, core, observe, shared |
+| `@confused-ai/playground` | Developer | Stable | all public APIs (optional) |
+| `@confused-ai/plugins` | Extensions | Experimental | contracts, core |
+| `@confused-ai/video` | Extensions | Experimental | contracts, core, observe, shared |
+| `@confused-ai/voice` | Extensions | Experimental | contracts, core, observe, shared |
+| `@confused-ai/runtime` | Runtime | Stable | contracts, core, guard, observe, shared |
+
+**Status Definitions:**
+- **Stable**: Production-ready, covered by tests, lint gates enforced.
+- **Experimental**: Under active development, API not yet guaranteed stable, may be moved or deprecated.
+
+**Boundary Rules:**
+1. Foundation layer (contracts, guard, shared) must not import from any other domain.
+2. Runtime layer (core, agentic, graph, workflow, execution, orchestration, planner, reasoning) can import from foundation and other runtime packages, but not providers or state.
+3. Providers and State layers can import foundation and runtime, but not sideways.
+4. Platform wraps runtime with operational concerns; can import all lower layers.
+5. Developer (CLI, SDK, test-utils, playground) is user-facing DX; can import public APIs.
+6. Extensions (plugins, compression, video, voice) must not affect core build/lint/test gates and are optional.
+
+## Legacy Package Overview (src/* compatibility)
 
 | Package | Purpose | Key APIs |
 |---|---|---|

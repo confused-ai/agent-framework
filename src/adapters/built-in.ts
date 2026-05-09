@@ -925,7 +925,7 @@ export class InMemorySessionStoreAdapter extends BaseAdapter implements SessionS
     async addMessage(sessionId: string, message: Omit<SessionMessage, 'id' | 'createdAt'>): Promise<StoredSession> {
         const session = await this.get(sessionId);
         if (!session) throw new Error(`Session not found: ${sessionId}`);
-        const msg: SessionMessage = { ...message, id: `msg_${Date.now()}_${Math.random()}`, createdAt: new Date() };
+        const msg: SessionMessage = { ...message, id: `msg_${crypto.randomUUID()}`, createdAt: new Date() };
         return this.update(sessionId, { messages: [...session.messages, msg] });
     }
 

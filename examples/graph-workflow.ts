@@ -26,7 +26,7 @@ import {
   type NodeContext,
   type GraphPlugin,
   type GraphEvent,
-} from '../src/graph/index.js';
+} from '@confused-ai/graph';
 
 // ── Step Functions ──────────────────────────────────────────────────────────
 

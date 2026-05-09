@@ -42,10 +42,10 @@ export interface CreateAgentOptions {
      * - Pass an array of `tool()` / `defineTool()` results **directly** — no `.toFrameworkTool()` needed.
      * - Mix `LightweightTool` and full `Tool` instances freely in the same array.
      * - Pass a `ToolRegistry` for advanced use.
-     * - Pass `[]` or `false` for a tool-free agent (pure text reasoning).
-     * - Omit to use the framework default tools (HttpClientTool + BrowserTool).
+     * - Pass `'web'` for the built-in preset (HttpClientTool + BrowserTool).
+     * - Pass `[]`, `false`, or omit entirely for a tool-free agent (pure text reasoning).
      */
-    tools?: (Tool | LightweightTool)[] | ToolRegistry | false;
+    tools?: (Tool | LightweightTool)[] | ToolRegistry | false | 'web';
     toolMiddleware?: ToolMiddleware[];
     /**
      * Session store. Pass `false` to run stateless (no session tracking).
@@ -256,6 +256,28 @@ export interface CreateAgentResult {
     streamEvents(prompt: string | MultiModalInput, options?: Omit<AgentRunOptions, 'onChunk'>): AsyncIterable<StreamChunk>;
     createSession(userId?: string): Promise<string>;
     getSessionMessages(sessionId: string): Promise<Message[]>;
+    /**
+     * Resume an existing session — returns a bound handle where every `run`,
+     * `stream`, and `streamEvents` call automatically uses the given session.
+     *
+     * @example
+     * ```ts
+     * const bot = agent({ instructions: '...' });
+     * const sid  = await bot.createSession();
+     *
+     * // Turn 1
+     * await bot.run('Hello!', { sessionId: sid });
+     *
+     * // Turn 2 — same session, cleaner syntax
+     * const session = bot.resume(sid);
+     * await session.run('What did I just say?');
+     * ```
+     */
+    resume(sessionId: string): {
+        run(prompt: string | MultiModalInput, options?: Omit<AgentRunOptions, 'sessionId'>): Promise<AgenticRunResult>;
+        stream(prompt: string | MultiModalInput, options?: Omit<AgentRunOptions, 'sessionId' | 'onChunk'>): AsyncIterable<string>;
+        streamEvents(prompt: string | MultiModalInput, options?: Omit<AgentRunOptions, 'sessionId' | 'onChunk'>): AsyncIterable<StreamChunk>;
+    };
     /** All resolved adapter bindings (merged from `adapters` + convenience fields). */
     readonly adapters?: AdapterBindings;
 }

@@ -23,6 +23,14 @@ export interface CreateHttpServiceOptions {
      */
     auth?: AuthMiddlewareOptions;
     /**
+     * Trust `X-Forwarded-For` as the client IP.
+     * Default: `false`.
+     *
+     * Leave this disabled unless the service is behind a trusted reverse proxy
+     * that strips any client-supplied forwarding headers and rewrites them.
+     */
+    trustProxy?: boolean;
+    /**
      * Maximum allowed request body size in bytes.
      * Requests exceeding this are rejected with 413.
      * Default: 1 MB (1_048_576 bytes).
@@ -30,8 +38,10 @@ export interface CreateHttpServiceOptions {
     maxBodyBytes?: number;
     /**
      * Idempotency: deduplicate retried chat requests via `X-Idempotency-Key` header.
-     * When a client retries with the same key within the TTL window, the cached
-     * response is returned without re-executing the agent.
+    * When a client retries with the same key and the same request scope within
+    * the TTL window, the cached response is returned without re-executing the agent.
+    * The request scope includes method, path, agent, session/user identifiers,
+    * streaming mode, caller context, and request message content.
      *
      * @example
      * ```ts
@@ -104,7 +114,9 @@ export interface CreateHttpServiceOptions {
     approvalStore?: import('../production/approval-store.js').ApprovalStore;
     /**
      * HTTP-level rate limiting — applied to every incoming request before agent execution.
-     * Keyed by: `identity` from auth context, then `x-forwarded-for` header, then remote IP.
+        * Keyed by: `identity` from auth context, then client IP.
+        * When `trustProxy` is `true`, client IP is sourced from `x-forwarded-for`.
+        * Otherwise it uses the direct socket remote address.
      *
      * @example
      * ```ts

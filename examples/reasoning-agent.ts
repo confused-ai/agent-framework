@@ -28,13 +28,13 @@ config({
     quiet: true,
 });
 
-import { ReasoningManager } from '../src/reasoning/index.js';
+import { ReasoningManager } from '@confused-ai/reasoning';
 import {
     NextAction,
     ReasoningEventType,
     type ReasoningEvent,
     type ReasoningStep,
-} from '../src/reasoning/types.js';
+} from '@confused-ai/reasoning';
 
 // ── Mock LLM (deterministic — no API key needed) ──────────────────────────
 
@@ -42,7 +42,7 @@ import {
  * Simulates an LLM that produces structured ReasoningStep JSON.
  * In production replace with:
  *
- *   import { OpenAIProvider } from '../src/providers/openai.js';
+ *   import { OpenAIProvider } from 'confused-ai';
  *   const llm = new OpenAIProvider({ apiKey: process.env.OPENAI_API_KEY!, model: 'gpt-4o' });
  *   const generate = async (messages) => {
  *     const r = await llm.generate(messages.map(m => ({ role: m.role as any, content: m.content })));

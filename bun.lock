@@ -5,6 +5,45 @@
     "": {
       "name": "@confused-ai/agent-framework",
       "dependencies": {
+        "@confused-ai/adapter-redis": "0.1.0",
+        "@confused-ai/agentic": "0.1.0",
+        "@confused-ai/artifacts": "0.1.0",
+        "@confused-ai/background": "0.1.0",
+        "@confused-ai/cli": "0.1.0",
+        "@confused-ai/compression": "0.1.0",
+        "@confused-ai/config": "0.1.0",
+        "@confused-ai/context": "0.1.0",
+        "@confused-ai/contracts": "0.1.0",
+        "@confused-ai/core": "0.1.0",
+        "@confused-ai/db": "0.1.0",
+        "@confused-ai/eval": "0.1.0",
+        "@confused-ai/execution": "0.1.0",
+        "@confused-ai/graph": "0.1.0",
+        "@confused-ai/guard": "0.1.0",
+        "@confused-ai/guardrails": "0.1.0",
+        "@confused-ai/knowledge": "0.1.0",
+        "@confused-ai/learning": "0.1.0",
+        "@confused-ai/memory": "0.1.0",
+        "@confused-ai/models": "0.1.0",
+        "@confused-ai/observe": "0.1.0",
+        "@confused-ai/orchestration": "0.1.0",
+        "@confused-ai/planner": "0.1.0",
+        "@confused-ai/playground": "0.1.0",
+        "@confused-ai/plugins": "0.1.0",
+        "@confused-ai/production": "0.1.0",
+        "@confused-ai/reasoning": "0.1.0",
+        "@confused-ai/router": "0.1.0",
+        "@confused-ai/scheduler": "0.1.0",
+        "@confused-ai/sdk": "0.1.0",
+        "@confused-ai/serve": "0.1.0",
+        "@confused-ai/session": "0.1.0",
+        "@confused-ai/shared": "0.1.0",
+        "@confused-ai/storage": "0.1.0",
+        "@confused-ai/test-utils": "0.1.0",
+        "@confused-ai/tools": "0.1.0",
+        "@confused-ai/video": "0.1.0",
+        "@confused-ai/voice": "0.1.0",
+        "@confused-ai/workflow": "0.1.0",
         "commander": "^14.0.3",
         "dotenv": "^17.3.1",
         "uuid": "^13.0.0",
@@ -59,30 +98,283 @@
         "yahoo-finance2",
       ],
     },
-    "packages/adapter-redis": {
-      "name": "@confused-ai/adapter-redis",
+    "packages/developer/cli": {
+      "name": "@confused-ai/cli",
+      "version": "0.1.0",
+      "bin": {
+        "confused-ai": "./dist/index.js",
+      },
+      "dependencies": {
+        "@confused-ai/graph": "*",
+        "@confused-ai/shared": "*",
+        "commander": "^14.0.3",
+      },
+      "peerDependencies": {
+        "confused-ai": "^1.1.6",
+      },
+    },
+    "packages/developer/playground": {
+      "name": "@confused-ai/playground",
       "version": "0.1.0",
       "dependencies": {
-        "@confused-ai/contracts": "workspace:*",
+        "@confused-ai/contracts": "*",
+      },
+      "devDependencies": {
+        "tsup": "^8.0.2",
+        "typescript": "^5.4.5",
+      },
+      "peerDependencies": {
+        "@confused-ai/agentic": "*",
+      },
+      "optionalPeers": [
+        "@confused-ai/agentic",
+      ],
+    },
+    "packages/developer/sdk": {
+      "name": "@confused-ai/sdk",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
+        "@confused-ai/execution": "*",
+        "@confused-ai/memory": "*",
+        "@confused-ai/planner": "*",
+        "@confused-ai/tools": "*",
+      },
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
+      },
+    },
+    "packages/developer/test-utils": {
+      "name": "@confused-ai/test-utils",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
       },
       "devDependencies": {
         "tsup": "^8.4.0",
         "typescript": "^5.9.3",
         "vitest": "^4.0.18",
       },
+    },
+    "packages/extensions/video": {
+      "name": "@confused-ai/video",
+      "version": "0.1.0",
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
+      },
       "peerDependencies": {
-        "redis": ">=4",
+        "@ffmpeg-installer/ffmpeg": ">=1.1.0",
+        "fluent-ffmpeg": ">=2.1.0",
+        "openai": ">=4.0.0",
+        "pexels": ">=1.4.0",
+      },
+      "optionalPeers": [
+        "@ffmpeg-installer/ffmpeg",
+        "fluent-ffmpeg",
+        "openai",
+        "pexels",
+      ],
+    },
+    "packages/extensions/voice": {
+      "name": "@confused-ai/voice",
+      "version": "0.1.0",
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
       },
     },
-    "packages/agentic": {
+    "packages/foundation/contracts": {
+      "name": "@confused-ai/contracts",
+      "version": "0.1.0",
+      "devDependencies": {
+        "tsup": "^8.4.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.18",
+      },
+    },
+    "packages/foundation/shared": {
+      "name": "@confused-ai/shared",
+      "version": "0.1.0",
+      "peerDependencies": {
+        "@confused-ai/core": "*",
+      },
+    },
+    "packages/platform/compression": {
+      "name": "@confused-ai/compression",
+      "version": "0.1.0",
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
+        "vitest": "^3.2.0",
+      },
+    },
+    "packages/platform/config": {
+      "name": "@confused-ai/config",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/shared": "*",
+      },
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
+        "vitest": "^3.2.0",
+      },
+    },
+    "packages/platform/context": {
+      "name": "@confused-ai/context",
+      "version": "0.1.0",
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
+        "vitest": "^3.2.0",
+      },
+    },
+    "packages/platform/eval": {
+      "name": "@confused-ai/eval",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/core": "*",
+      },
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
+      },
+    },
+    "packages/platform/guard": {
+      "name": "@confused-ai/guard",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+      },
+      "devDependencies": {
+        "tsup": "^8.4.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.18",
+      },
+    },
+    "packages/platform/guardrails": {
+      "name": "@confused-ai/guardrails",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/core": "*",
+        "zod": "^3.0.0",
+      },
+      "devDependencies": {
+        "tsup": "*",
+        "typescript": "*",
+      },
+    },
+    "packages/platform/observe": {
+      "name": "@confused-ai/observe",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+        "@opentelemetry/api": "^1.9.0",
+      },
+      "devDependencies": {
+        "tsup": "^8.4.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.18",
+      },
+    },
+    "packages/platform/production": {
+      "name": "@confused-ai/production",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
+        "@confused-ai/session": "*",
+        "@confused-ai/shared": "*",
+      },
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
+        "vitest": "^3.2.0",
+      },
+      "peerDependencies": {
+        "better-sqlite3": ">=9.0.0",
+      },
+      "optionalPeers": [
+        "better-sqlite3",
+      ],
+    },
+    "packages/platform/serve": {
+      "name": "@confused-ai/serve",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+        "@confused-ai/production": "*",
+      },
+      "devDependencies": {
+        "tsup": "^8.4.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.18",
+        "zod": "^3.23.8",
+      },
+      "peerDependencies": {
+        "zod": ">=3.22.0",
+      },
+    },
+    "packages/providers/models": {
+      "name": "@confused-ai/models",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
+        "@confused-ai/shared": "*",
+      },
+      "devDependencies": {
+        "@anthropic-ai/sdk": ">=0.30.0",
+        "@aws-sdk/client-bedrock-runtime": ">=3.0.0",
+        "@google/generative-ai": ">=0.5.0",
+        "ollama": ">=0.5.0",
+        "openai": ">=4.0.0",
+        "tsup": "^8.4.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.18",
+      },
+      "peerDependencies": {
+        "@anthropic-ai/sdk": ">=0.30.0",
+        "@aws-sdk/client-bedrock-runtime": ">=3.0.0",
+        "@google/generative-ai": ">=0.5.0",
+        "ollama": ">=0.5.0",
+        "openai": ">=4.0.0",
+      },
+      "optionalPeers": [
+        "@anthropic-ai/sdk",
+        "@aws-sdk/client-bedrock-runtime",
+        "@google/generative-ai",
+        "ollama",
+        "openai",
+      ],
+    },
+    "packages/providers/router": {
+      "name": "@confused-ai/router",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
+      },
+      "devDependencies": {
+        "tsup": "^8.4.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.18",
+      },
+    },
+    "packages/runtime/agentic": {
       "name": "@confused-ai/agentic",
       "version": "0.1.0",
       "dependencies": {
-        "@confused-ai/core": "workspace:*",
-        "@confused-ai/guard": "workspace:*",
-        "@confused-ai/guardrails": "workspace:*",
-        "@confused-ai/observe": "workspace:*",
-        "@confused-ai/shared": "workspace:*",
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
+        "@confused-ai/guard": "*",
+        "@confused-ai/guardrails": "*",
+        "@confused-ai/observe": "*",
+        "@confused-ai/shared": "*",
         "zod": "^3.0.0",
       },
       "devDependencies": {
@@ -90,10 +382,10 @@
         "typescript": "*",
       },
       "peerDependencies": {
-        "@confused-ai/compression": "workspace:*",
-        "@confused-ai/knowledge": "workspace:*",
-        "@confused-ai/production": "workspace:*",
-        "@confused-ai/reasoning": "workspace:*",
+        "@confused-ai/compression": "*",
+        "@confused-ai/knowledge": "*",
+        "@confused-ai/production": "*",
+        "@confused-ai/reasoning": "*",
         "@opentelemetry/api": "^1.0.0",
       },
       "optionalPeers": [
@@ -104,18 +396,12 @@
         "@opentelemetry/api",
       ],
     },
-    "packages/artifacts": {
-      "name": "@confused-ai/artifacts",
-      "version": "0.1.0",
-      "devDependencies": {
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-        "vitest": "^3.2.0",
-      },
-    },
-    "packages/background": {
+    "packages/runtime/background": {
       "name": "@confused-ai/background",
       "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+      },
       "devDependencies": {
         "tsup": "*",
         "typescript": "*",
@@ -135,65 +421,11 @@
         "kafkajs",
       ],
     },
-    "packages/cli": {
-      "name": "@confused-ai/cli",
-      "version": "0.1.0",
-      "bin": {
-        "confused-ai": "./dist/index.js",
-      },
-      "dependencies": {
-        "@confused-ai/graph": "workspace:*",
-        "@confused-ai/shared": "workspace:*",
-        "commander": "^14.0.3",
-      },
-      "peerDependencies": {
-        "confused-ai": "^1.1.6",
-      },
-    },
-    "packages/compression": {
-      "name": "@confused-ai/compression",
-      "version": "0.1.0",
-      "devDependencies": {
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-        "vitest": "^3.2.0",
-      },
-    },
-    "packages/config": {
-      "name": "@confused-ai/config",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/shared": "workspace:*",
-      },
-      "devDependencies": {
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-        "vitest": "^3.2.0",
-      },
-    },
-    "packages/context": {
-      "name": "@confused-ai/context",
-      "version": "0.1.0",
-      "devDependencies": {
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-        "vitest": "^3.2.0",
-      },
-    },
-    "packages/contracts": {
-      "name": "@confused-ai/contracts",
-      "version": "0.1.0",
-      "devDependencies": {
-        "tsup": "^8.4.0",
-        "typescript": "^5.9.3",
-        "vitest": "^4.0.18",
-      },
-    },
-    "packages/core": {
+    "packages/runtime/core": {
       "name": "@confused-ai/core",
       "version": "0.1.0",
       "dependencies": {
-        "@confused-ai/contracts": "workspace:*",
+        "@confused-ai/contracts": "*",
         "zod": ">=3.22.0",
       },
       "devDependencies": {
@@ -202,9 +434,9 @@
         "vitest": "^4.0.18",
       },
       "peerDependencies": {
-        "@confused-ai/db": "workspace:*",
-        "@confused-ai/guard": "workspace:*",
-        "@confused-ai/observe": "workspace:*",
+        "@confused-ai/db": "*",
+        "@confused-ai/guard": "*",
+        "@confused-ai/observe": "*",
       },
       "optionalPeers": [
         "@confused-ai/db",
@@ -212,7 +444,139 @@
         "@confused-ai/observe",
       ],
     },
-    "packages/db": {
+    "packages/runtime/execution": {
+      "name": "@confused-ai/execution",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
+        "@confused-ai/planner": "*",
+      },
+      "devDependencies": {
+        "tsup": "*",
+        "typescript": "*",
+      },
+    },
+    "packages/runtime/graph": {
+      "name": "@confused-ai/graph",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
+      },
+      "devDependencies": {
+        "@types/better-sqlite3": "^7.6.0",
+        "better-sqlite3": "^9.0.0",
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
+        "vitest": "^1.0.0",
+      },
+      "peerDependencies": {
+        "better-sqlite3": ">=9.0.0",
+        "bullmq": ">=5.0.0",
+        "ioredis": ">=5.0.0",
+      },
+      "optionalPeers": [
+        "better-sqlite3",
+        "bullmq",
+        "ioredis",
+      ],
+    },
+    "packages/runtime/orchestration": {
+      "name": "@confused-ai/orchestration",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/agentic": "*",
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
+        "@confused-ai/memory": "*",
+        "@confused-ai/models": "*",
+        "@confused-ai/observe": "*",
+        "@confused-ai/planner": "*",
+        "@confused-ai/shared": "*",
+        "@confused-ai/tools": "*",
+        "zod": "^3.0.0",
+      },
+      "devDependencies": {
+        "tsup": "*",
+        "typescript": "*",
+      },
+    },
+    "packages/runtime/planner": {
+      "name": "@confused-ai/planner",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
+      },
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
+        "vitest": "^3.2.0",
+      },
+    },
+    "packages/runtime/reasoning": {
+      "name": "@confused-ai/reasoning",
+      "version": "0.1.0",
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
+        "vitest": "^3.2.0",
+      },
+    },
+    "packages/runtime/scheduler": {
+      "name": "@confused-ai/scheduler",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+      },
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
+        "vitest": "^3.2.0",
+      },
+    },
+    "packages/runtime/workflow": {
+      "name": "@confused-ai/workflow",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
+      },
+      "devDependencies": {
+        "tsup": "^8.4.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.18",
+      },
+    },
+    "packages/state/adapter-redis": {
+      "name": "@confused-ai/adapter-redis",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+      },
+      "devDependencies": {
+        "tsup": "^8.4.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.18",
+      },
+      "peerDependencies": {
+        "redis": ">=4",
+      },
+    },
+    "packages/state/artifacts": {
+      "name": "@confused-ai/artifacts",
+      "version": "0.1.0",
+      "dependencies": {
+        "@confused-ai/contracts": "*",
+      },
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
+        "vitest": "^3.2.0",
+      },
+    },
+    "packages/state/db": {
       "name": "@confused-ai/db",
       "version": "0.1.0",
       "devDependencies": {
@@ -243,83 +607,12 @@
         "pg",
       ],
     },
-    "packages/eval": {
-      "name": "@confused-ai/eval",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/core": "workspace:*",
-      },
-      "devDependencies": {
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-      },
-    },
-    "packages/execution": {
-      "name": "@confused-ai/execution",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/core": "workspace:*",
-        "@confused-ai/planner": "workspace:*",
-      },
-      "devDependencies": {
-        "tsup": "*",
-        "typescript": "*",
-      },
-    },
-    "packages/graph": {
-      "name": "@confused-ai/graph",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/core": "workspace:*",
-      },
-      "devDependencies": {
-        "@types/better-sqlite3": "^7.6.0",
-        "better-sqlite3": "^9.0.0",
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-        "vitest": "^1.0.0",
-      },
-      "peerDependencies": {
-        "better-sqlite3": ">=9.0.0",
-        "bullmq": ">=5.0.0",
-        "ioredis": ">=5.0.0",
-      },
-      "optionalPeers": [
-        "better-sqlite3",
-        "bullmq",
-        "ioredis",
-      ],
-    },
-    "packages/guard": {
-      "name": "@confused-ai/guard",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/contracts": "workspace:*",
-      },
-      "devDependencies": {
-        "tsup": "^8.4.0",
-        "typescript": "^5.9.3",
-        "vitest": "^4.0.18",
-      },
-    },
-    "packages/guardrails": {
-      "name": "@confused-ai/guardrails",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/core": "workspace:*",
-        "zod": "^3.0.0",
-      },
-      "devDependencies": {
-        "tsup": "*",
-        "typescript": "*",
-      },
-    },
-    "packages/knowledge": {
+    "packages/state/knowledge": {
       "name": "@confused-ai/knowledge",
       "version": "0.1.0",
       "dependencies": {
-        "@confused-ai/contracts": "workspace:*",
-        "@confused-ai/core": "workspace:*",
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
       },
       "devDependencies": {
         "tsup": "^8.4.0",
@@ -327,7 +620,7 @@
         "vitest": "^4.0.18",
       },
       "peerDependencies": {
-        "@confused-ai/db": "workspace:*",
+        "@confused-ai/db": "*",
         "openai": ">=4.0.0",
       },
       "optionalPeers": [
@@ -335,7 +628,7 @@
         "openai",
       ],
     },
-    "packages/learning": {
+    "packages/state/learning": {
       "name": "@confused-ai/learning",
       "version": "0.1.0",
       "devDependencies": {
@@ -343,7 +636,7 @@
         "typescript": "^5.0.0",
       },
       "peerDependencies": {
-        "@confused-ai/db": "workspace:*",
+        "@confused-ai/db": "*",
         "better-sqlite3": ">=9.0.0",
       },
       "optionalPeers": [
@@ -351,12 +644,13 @@
         "better-sqlite3",
       ],
     },
-    "packages/memory": {
+    "packages/state/memory": {
       "name": "@confused-ai/memory",
       "version": "0.1.0",
       "dependencies": {
-        "@confused-ai/core": "workspace:*",
-        "@confused-ai/shared": "workspace:*",
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
+        "@confused-ai/shared": "*",
       },
       "devDependencies": {
         "tsup": "^8.0.0",
@@ -364,7 +658,7 @@
         "vitest": "^3.2.0",
       },
       "peerDependencies": {
-        "@confused-ai/db": "workspace:*",
+        "@confused-ai/db": "*",
         "@pinecone-database/pinecone": ">=3.0.0",
         "pg": ">=8.0.0",
       },
@@ -374,201 +668,13 @@
         "pg",
       ],
     },
-    "packages/models": {
-      "name": "@confused-ai/models",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/contracts": "workspace:*",
-        "@confused-ai/core": "workspace:*",
-        "@confused-ai/shared": "workspace:*",
-      },
-      "devDependencies": {
-        "@anthropic-ai/sdk": ">=0.30.0",
-        "@aws-sdk/client-bedrock-runtime": ">=3.0.0",
-        "@google/generative-ai": ">=0.5.0",
-        "ollama": ">=0.5.0",
-        "openai": ">=4.0.0",
-        "tsup": "^8.4.0",
-        "typescript": "^5.9.3",
-        "vitest": "^4.0.18",
-      },
-      "peerDependencies": {
-        "@anthropic-ai/sdk": ">=0.30.0",
-        "@aws-sdk/client-bedrock-runtime": ">=3.0.0",
-        "@google/generative-ai": ">=0.5.0",
-        "ollama": ">=0.5.0",
-        "openai": ">=4.0.0",
-      },
-      "optionalPeers": [
-        "@anthropic-ai/sdk",
-        "@aws-sdk/client-bedrock-runtime",
-        "@google/generative-ai",
-        "ollama",
-        "openai",
-      ],
-    },
-    "packages/observe": {
-      "name": "@confused-ai/observe",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/contracts": "workspace:*",
-        "@opentelemetry/api": "^1.9.0",
-      },
-      "devDependencies": {
-        "tsup": "^8.4.0",
-        "typescript": "^5.9.3",
-        "vitest": "^4.0.18",
-      },
-    },
-    "packages/orchestration": {
-      "name": "@confused-ai/orchestration",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/agentic": "workspace:*",
-        "@confused-ai/core": "workspace:*",
-        "@confused-ai/memory": "workspace:*",
-        "@confused-ai/models": "workspace:*",
-        "@confused-ai/observe": "workspace:*",
-        "@confused-ai/planner": "workspace:*",
-        "@confused-ai/shared": "workspace:*",
-        "@confused-ai/tools": "workspace:*",
-        "zod": "^3.0.0",
-      },
-      "devDependencies": {
-        "tsup": "*",
-        "typescript": "*",
-      },
-    },
-    "packages/planner": {
-      "name": "@confused-ai/planner",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/core": "workspace:*",
-      },
-      "devDependencies": {
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-        "vitest": "^3.2.0",
-      },
-    },
-    "packages/playground": {
-      "name": "@confused-ai/playground",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/contracts": "workspace:*",
-      },
-      "devDependencies": {
-        "tsup": "^8.0.2",
-        "typescript": "^5.4.5",
-      },
-      "peerDependencies": {
-        "@confused-ai/agentic": "workspace:*",
-      },
-      "optionalPeers": [
-        "@confused-ai/agentic",
-      ],
-    },
-    "packages/plugins": {
-      "name": "@confused-ai/plugins",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/agentic": "workspace:*",
-        "@confused-ai/contracts": "workspace:*",
-      },
-      "devDependencies": {
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-      },
-    },
-    "packages/production": {
-      "name": "@confused-ai/production",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/core": "workspace:*",
-        "@confused-ai/session": "workspace:*",
-        "@confused-ai/shared": "workspace:*",
-      },
-      "devDependencies": {
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-        "vitest": "^3.2.0",
-      },
-      "peerDependencies": {
-        "better-sqlite3": ">=9.0.0",
-      },
-      "optionalPeers": [
-        "better-sqlite3",
-      ],
-    },
-    "packages/reasoning": {
-      "name": "@confused-ai/reasoning",
-      "version": "0.1.0",
-      "devDependencies": {
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-        "vitest": "^3.2.0",
-      },
-    },
-    "packages/router": {
-      "name": "@confused-ai/router",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/contracts": "workspace:*",
-        "@confused-ai/core": "workspace:*",
-      },
-      "devDependencies": {
-        "tsup": "^8.4.0",
-        "typescript": "^5.9.3",
-        "vitest": "^4.0.18",
-      },
-    },
-    "packages/scheduler": {
-      "name": "@confused-ai/scheduler",
-      "version": "0.1.0",
-      "devDependencies": {
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-        "vitest": "^3.2.0",
-      },
-    },
-    "packages/sdk": {
-      "name": "@confused-ai/sdk",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/core": "workspace:*",
-        "@confused-ai/execution": "workspace:*",
-        "@confused-ai/memory": "workspace:*",
-        "@confused-ai/planner": "workspace:*",
-        "@confused-ai/tools": "workspace:*",
-      },
-      "devDependencies": {
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-      },
-    },
-    "packages/serve": {
-      "name": "@confused-ai/serve",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/contracts": "workspace:*",
-        "@confused-ai/production": "workspace:*",
-      },
-      "devDependencies": {
-        "tsup": "^8.4.0",
-        "typescript": "^5.9.3",
-        "vitest": "^4.0.18",
-        "zod": "^3.23.8",
-      },
-      "peerDependencies": {
-        "zod": ">=3.22.0",
-      },
-    },
-    "packages/session": {
+    "packages/state/session": {
       "name": "@confused-ai/session",
       "version": "0.1.0",
       "dependencies": {
-        "@confused-ai/contracts": "workspace:*",
-        "@confused-ai/core": "workspace:*",
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
+        "@confused-ai/shared": "*",
       },
       "devDependencies": {
         "tsup": "^8.4.0",
@@ -576,7 +682,7 @@
         "vitest": "^4.0.18",
       },
       "peerDependencies": {
-        "@confused-ai/db": "workspace:*",
+        "@confused-ai/db": "*",
         "better-sqlite3": ">=11.0.0",
         "ioredis": ">=5.0.0",
       },
@@ -586,14 +692,7 @@
         "ioredis",
       ],
     },
-    "packages/shared": {
-      "name": "@confused-ai/shared",
-      "version": "0.1.0",
-      "peerDependencies": {
-        "@confused-ai/core": "workspace:*",
-      },
-    },
-    "packages/storage": {
+    "packages/state/storage": {
       "name": "@confused-ai/storage",
       "version": "0.1.0",
       "devDependencies": {
@@ -602,26 +701,25 @@
         "vitest": "^3.2.0",
       },
     },
-    "packages/test-utils": {
-      "name": "@confused-ai/test-utils",
+    "packages/tools-layer/plugins": {
+      "name": "@confused-ai/plugins",
       "version": "0.1.0",
       "dependencies": {
-        "@confused-ai/contracts": "workspace:*",
-        "@confused-ai/core": "workspace:*",
+        "@confused-ai/agentic": "*",
+        "@confused-ai/contracts": "*",
       },
       "devDependencies": {
-        "tsup": "^8.4.0",
-        "typescript": "^5.9.3",
-        "vitest": "^4.0.18",
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
       },
     },
-    "packages/tools": {
+    "packages/tools-layer/tools": {
       "name": "@confused-ai/tools",
       "version": "0.1.0",
       "dependencies": {
-        "@confused-ai/contracts": "workspace:*",
-        "@confused-ai/core": "workspace:*",
-        "@confused-ai/shared": "workspace:*",
+        "@confused-ai/contracts": "*",
+        "@confused-ai/core": "*",
+        "@confused-ai/shared": "*",
         "zod": "^3.0.0",
       },
       "devDependencies": {
@@ -637,47 +735,6 @@
         "duck-duck-scrape",
         "playwright",
       ],
-    },
-    "packages/video": {
-      "name": "@confused-ai/video",
-      "version": "0.1.0",
-      "devDependencies": {
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-      },
-      "peerDependencies": {
-        "@ffmpeg-installer/ffmpeg": ">=1.1.0",
-        "fluent-ffmpeg": ">=2.1.0",
-        "openai": ">=4.0.0",
-        "pexels": ">=1.4.0",
-      },
-      "optionalPeers": [
-        "@ffmpeg-installer/ffmpeg",
-        "fluent-ffmpeg",
-        "openai",
-        "pexels",
-      ],
-    },
-    "packages/voice": {
-      "name": "@confused-ai/voice",
-      "version": "0.1.0",
-      "devDependencies": {
-        "tsup": "^8.0.0",
-        "typescript": "^5.0.0",
-      },
-    },
-    "packages/workflow": {
-      "name": "@confused-ai/workflow",
-      "version": "0.1.0",
-      "dependencies": {
-        "@confused-ai/contracts": "workspace:*",
-        "@confused-ai/core": "workspace:*",
-      },
-      "devDependencies": {
-        "tsup": "^8.4.0",
-        "typescript": "^5.9.3",
-        "vitest": "^4.0.18",
-      },
     },
   },
   "packages": {
@@ -805,83 +862,83 @@
 
     "@boundaries/elements": ["@boundaries/elements@2.0.1", "", { "dependencies": { "eslint-import-resolver-node": "0.3.9", "eslint-module-utils": "2.12.1", "handlebars": "4.7.9", "is-core-module": "2.16.1", "micromatch": "4.0.8" } }, "sha512-sAWO3D8PFP6pBXdxxW93SQi/KQqqhE2AAHo3AgWfdtJXwO6bfK6/wUN81XnOZk0qRC6vHzUEKhjwVD9dtDWvxg=="],
 
-    "@confused-ai/adapter-redis": ["@confused-ai/adapter-redis@workspace:packages/adapter-redis"],
+    "@confused-ai/adapter-redis": ["@confused-ai/adapter-redis@workspace:packages/state/adapter-redis"],
 
-    "@confused-ai/agentic": ["@confused-ai/agentic@workspace:packages/agentic"],
+    "@confused-ai/agentic": ["@confused-ai/agentic@workspace:packages/runtime/agentic"],
 
-    "@confused-ai/artifacts": ["@confused-ai/artifacts@workspace:packages/artifacts"],
+    "@confused-ai/artifacts": ["@confused-ai/artifacts@workspace:packages/state/artifacts"],
 
-    "@confused-ai/background": ["@confused-ai/background@workspace:packages/background"],
+    "@confused-ai/background": ["@confused-ai/background@workspace:packages/runtime/background"],
 
-    "@confused-ai/cli": ["@confused-ai/cli@workspace:packages/cli"],
+    "@confused-ai/cli": ["@confused-ai/cli@workspace:packages/developer/cli"],
 
-    "@confused-ai/compression": ["@confused-ai/compression@workspace:packages/compression"],
+    "@confused-ai/compression": ["@confused-ai/compression@workspace:packages/platform/compression"],
 
-    "@confused-ai/config": ["@confused-ai/config@workspace:packages/config"],
+    "@confused-ai/config": ["@confused-ai/config@workspace:packages/platform/config"],
 
-    "@confused-ai/context": ["@confused-ai/context@workspace:packages/context"],
+    "@confused-ai/context": ["@confused-ai/context@workspace:packages/platform/context"],
 
-    "@confused-ai/contracts": ["@confused-ai/contracts@workspace:packages/contracts"],
+    "@confused-ai/contracts": ["@confused-ai/contracts@workspace:packages/foundation/contracts"],
 
-    "@confused-ai/core": ["@confused-ai/core@workspace:packages/core"],
+    "@confused-ai/core": ["@confused-ai/core@workspace:packages/runtime/core"],
 
-    "@confused-ai/db": ["@confused-ai/db@workspace:packages/db"],
+    "@confused-ai/db": ["@confused-ai/db@workspace:packages/state/db"],
 
-    "@confused-ai/eval": ["@confused-ai/eval@workspace:packages/eval"],
+    "@confused-ai/eval": ["@confused-ai/eval@workspace:packages/platform/eval"],
 
-    "@confused-ai/execution": ["@confused-ai/execution@workspace:packages/execution"],
+    "@confused-ai/execution": ["@confused-ai/execution@workspace:packages/runtime/execution"],
 
-    "@confused-ai/graph": ["@confused-ai/graph@workspace:packages/graph"],
+    "@confused-ai/graph": ["@confused-ai/graph@workspace:packages/runtime/graph"],
 
-    "@confused-ai/guard": ["@confused-ai/guard@workspace:packages/guard"],
+    "@confused-ai/guard": ["@confused-ai/guard@workspace:packages/platform/guard"],
 
-    "@confused-ai/guardrails": ["@confused-ai/guardrails@workspace:packages/guardrails"],
+    "@confused-ai/guardrails": ["@confused-ai/guardrails@workspace:packages/platform/guardrails"],
 
-    "@confused-ai/knowledge": ["@confused-ai/knowledge@workspace:packages/knowledge"],
+    "@confused-ai/knowledge": ["@confused-ai/knowledge@workspace:packages/state/knowledge"],
 
-    "@confused-ai/learning": ["@confused-ai/learning@workspace:packages/learning"],
+    "@confused-ai/learning": ["@confused-ai/learning@workspace:packages/state/learning"],
 
-    "@confused-ai/memory": ["@confused-ai/memory@workspace:packages/memory"],
+    "@confused-ai/memory": ["@confused-ai/memory@workspace:packages/state/memory"],
 
-    "@confused-ai/models": ["@confused-ai/models@workspace:packages/models"],
+    "@confused-ai/models": ["@confused-ai/models@workspace:packages/providers/models"],
 
-    "@confused-ai/observe": ["@confused-ai/observe@workspace:packages/observe"],
+    "@confused-ai/observe": ["@confused-ai/observe@workspace:packages/platform/observe"],
 
-    "@confused-ai/orchestration": ["@confused-ai/orchestration@workspace:packages/orchestration"],
+    "@confused-ai/orchestration": ["@confused-ai/orchestration@workspace:packages/runtime/orchestration"],
 
-    "@confused-ai/planner": ["@confused-ai/planner@workspace:packages/planner"],
+    "@confused-ai/planner": ["@confused-ai/planner@workspace:packages/runtime/planner"],
 
-    "@confused-ai/playground": ["@confused-ai/playground@workspace:packages/playground"],
+    "@confused-ai/playground": ["@confused-ai/playground@workspace:packages/developer/playground"],
 
-    "@confused-ai/plugins": ["@confused-ai/plugins@workspace:packages/plugins"],
+    "@confused-ai/plugins": ["@confused-ai/plugins@workspace:packages/tools-layer/plugins"],
 
-    "@confused-ai/production": ["@confused-ai/production@workspace:packages/production"],
+    "@confused-ai/production": ["@confused-ai/production@workspace:packages/platform/production"],
 
-    "@confused-ai/reasoning": ["@confused-ai/reasoning@workspace:packages/reasoning"],
+    "@confused-ai/reasoning": ["@confused-ai/reasoning@workspace:packages/runtime/reasoning"],
 
-    "@confused-ai/router": ["@confused-ai/router@workspace:packages/router"],
+    "@confused-ai/router": ["@confused-ai/router@workspace:packages/providers/router"],
 
-    "@confused-ai/scheduler": ["@confused-ai/scheduler@workspace:packages/scheduler"],
+    "@confused-ai/scheduler": ["@confused-ai/scheduler@workspace:packages/runtime/scheduler"],
 
-    "@confused-ai/sdk": ["@confused-ai/sdk@workspace:packages/sdk"],
+    "@confused-ai/sdk": ["@confused-ai/sdk@workspace:packages/developer/sdk"],
 
-    "@confused-ai/serve": ["@confused-ai/serve@workspace:packages/serve"],
+    "@confused-ai/serve": ["@confused-ai/serve@workspace:packages/platform/serve"],
 
-    "@confused-ai/session": ["@confused-ai/session@workspace:packages/session"],
+    "@confused-ai/session": ["@confused-ai/session@workspace:packages/state/session"],
 
-    "@confused-ai/shared": ["@confused-ai/shared@workspace:packages/shared"],
+    "@confused-ai/shared": ["@confused-ai/shared@workspace:packages/foundation/shared"],
 
-    "@confused-ai/storage": ["@confused-ai/storage@workspace:packages/storage"],
+    "@confused-ai/storage": ["@confused-ai/storage@workspace:packages/state/storage"],
 
-    "@confused-ai/test-utils": ["@confused-ai/test-utils@workspace:packages/test-utils"],
+    "@confused-ai/test-utils": ["@confused-ai/test-utils@workspace:packages/developer/test-utils"],
 
-    "@confused-ai/tools": ["@confused-ai/tools@workspace:packages/tools"],
+    "@confused-ai/tools": ["@confused-ai/tools@workspace:packages/tools-layer/tools"],
 
-    "@confused-ai/video": ["@confused-ai/video@workspace:packages/video"],
+    "@confused-ai/video": ["@confused-ai/video@workspace:packages/extensions/video"],
 
-    "@confused-ai/voice": ["@confused-ai/voice@workspace:packages/voice"],
+    "@confused-ai/voice": ["@confused-ai/voice@workspace:packages/extensions/voice"],
 
-    "@confused-ai/workflow": ["@confused-ai/workflow@workspace:packages/workflow"],
+    "@confused-ai/workflow": ["@confused-ai/workflow@workspace:packages/runtime/workflow"],
 
     "@docsearch/css": ["@docsearch/css@3.8.2", "", {}, "sha512-y05ayQFyUmCXze79+56v/4HpycYF3uFqB78pLPrSV5ZKAlDuIAAJNhaRi8tTdRNXh05yxX/TyNnzD6LwSM89vQ=="],
 

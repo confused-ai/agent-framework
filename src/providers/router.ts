@@ -593,12 +593,10 @@ export class LLMRouter implements LLMProvider {
     }
 
     async streamText(messages: Message[], options?: StreamOptions): Promise<GenerateResult> {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { entry, decision } = this.route(messages, options as any);
         this.recordDecision(decision);
 
         const provider = entry.provider;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const streamFn: (msgs: Message[], opts?: any) => Promise<GenerateResult> = provider.streamText?.bind(provider) ?? provider.generateText.bind(provider);
 
         try {
@@ -772,7 +770,6 @@ export class LLMRouter implements LLMProvider {
                 true,
             );
             if (method === 'streamText') {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const fn: (msgs: Message[], opts?: any) => Promise<GenerateResult> = fallback.provider.streamText?.bind(fallback.provider) ?? fallback.provider.generateText.bind(fallback.provider);
                 return fn(messages, options as unknown as GenerateOptions);
             }

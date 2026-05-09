@@ -58,44 +58,44 @@ loadEnv({
 });
 
 // ── Agent factory ──────────────────────────────────────────────────────────
-import { createAgent, resolveLlmForCreateAgent } from '../src/create-agent.js';
-import { bare } from '../src/dx/bare.js';
-import { defineAgent } from '../src/dx/define-agent.js';
-import { compose, pipe } from '../src/dx/compose.js';
-import { definePersona, buildPersonaInstructions } from '../src/dx/persona-builder.js';
+import { createAgent, resolveLlmForCreateAgent } from 'confused-ai';
+import { bare } from 'confused-ai';
+import { defineAgent } from 'confused-ai';
+import { compose, pipe } from 'confused-ai';
+import { definePersona, buildPersonaInstructions } from 'confused-ai';
 
 // ── Session & memory ───────────────────────────────────────────────────────
-import { InMemorySessionStore } from '../src/session/index.js';
-import { SessionState } from '../src/session/types.js';
-import { InMemoryStore, MemoryType } from '../src/memory/index.js';
-import { InMemoryVectorStore } from '../src/memory/in-memory-vector-store.js';
+import { InMemorySessionStore } from 'confused-ai';
+import { SessionState } from '@confused-ai/session';
+import { InMemoryStore, MemoryType } from 'confused-ai';
+import { InMemoryVectorStore } from 'confused-ai';
 
 // ── Learning / profiles ────────────────────────────────────────────────────
-import { InMemoryUserProfileStore } from '../src/learning/index.js';
-import { LearningMode } from '../src/learning/types.js';
+import { InMemoryUserProfileStore } from 'confused-ai';
+import { LearningMode } from 'confused-ai';
 
 // ── Knowledge / RAG ────────────────────────────────────────────────────────
-import { KnowledgeEngine, splitText } from '../src/knowledge/engine.js';
-import type { DocumentInput } from '../src/knowledge/engine.js';
+import { KnowledgeEngine, splitText } from '@confused-ai/knowledge';
+import type { DocumentInput } from '@confused-ai/knowledge';
 
 // ── Tools ──────────────────────────────────────────────────────────────────
-import { CalculatorAddTool } from '../src/tools/calculator-tool.js';
-import { HttpClientTool } from '../src/tools/http-tool.js';
+import { CalculatorAddTool } from 'confused-ai';
+import { HttpClientTool } from 'confused-ai';
 
 // ── Orchestration ──────────────────────────────────────────────────────────
-import { createHandoff } from '../src/orchestration/handoff.js';
-import { createAgentRouter } from '../src/orchestration/router.js';
-import { createSupervisor, createRole } from '../src/orchestration/supervisor.js';
-import { createConsensus } from '../src/orchestration/consensus.js';
-import { createPipeline } from '../src/orchestration/pipeline.js';
-import { asOrchestratorAgent } from '../src/sdk/index.js';
-import { createRunnableAgent } from '../src/orchestration/agent-adapter.js';
-import { AgentState } from '../src/contracts/index.js';
-import type { AgentInput } from '../src/contracts/index.js';
+import { createHandoff } from 'confused-ai';
+import { createAgentRouter } from 'confused-ai';
+import { createSupervisor, createRole } from 'confused-ai';
+import { createConsensus } from 'confused-ai';
+import { createPipeline } from 'confused-ai';
+import { asOrchestratorAgent } from 'confused-ai';
+import { createRunnableAgent } from 'confused-ai';
+import { AgentState } from 'confused-ai';
+import type { AgentInput } from 'confused-ai';
 
 // ── SDK workflows ──────────────────────────────────────────────────────────
-import { defineAgent as defineTypedAgent, createWorkflow } from '../src/sdk/index.js';
-import type { DefinedAgent } from '../src/sdk/index.js';
+import { defineAgent as defineTypedAgent, createWorkflow } from 'confused-ai';
+import type { DefinedAgent } from 'confused-ai';
 
 // ── Guardrails ─────────────────────────────────────────────────────────────
 import {
@@ -105,40 +105,40 @@ import {
     createForbiddenTopicsRule,
     detectPromptInjection,
     createPromptInjectionRule,
-} from '../src/guardrails/index.js';
+} from 'confused-ai';
 
 // ── Observability ──────────────────────────────────────────────────────────
-import { ConsoleLogger } from '../src/observability/console-logger.js';
-import { MetricsCollectorImpl } from '../src/observability/metrics.js';
-import { InMemoryTracer } from '../src/observability/tracer.js';
-import { LogLevel } from '../src/observability/types.js';
-import { ExactMatchAccuracy, LevenshteinAccuracy } from '../src/observability/eval.js';
+import { ConsoleLogger } from 'confused-ai';
+import { MetricsCollectorImpl } from 'confused-ai';
+import { InMemoryTracer } from 'confused-ai';
+import { LogLevel } from 'confused-ai';
+import { ExactMatchAccuracy, LevenshteinAccuracy } from 'confused-ai';
 
 // ── Production resilience ──────────────────────────────────────────────────
-import { CircuitBreaker, CircuitState } from '../src/production/circuit-breaker.js';
-import { RateLimiter } from '../src/production/rate-limiter.js';
+import { CircuitBreaker, CircuitState } from '@confused-ai/production';
+import { RateLimiter } from '@confused-ai/production';
 import {
     HealthCheckManager,
     HealthStatus,
     createSessionStoreHealthCheck,
     createCustomHealthCheck,
-} from '../src/production/health.js';
+} from '@confused-ai/production';
 
 // ── Artifacts ─────────────────────────────────────────────────────────────
-import { InMemoryArtifactStorage, createTextArtifact } from '../src/artifacts/index.js';
+import { InMemoryArtifactStorage, createTextArtifact } from '@confused-ai/artifacts';
 
 // ── HTTP runtime ───────────────────────────────────────────────────────────
-import { createHttpService, listenService } from '../src/runtime/server.js';
-import { getRuntimeOpenApiJson } from '../src/runtime/openapi.js';
+import { createHttpService, listenService } from '@confused-ai/serve';
+import { getRuntimeOpenApiJson } from '@confused-ai/serve';
 
 // ── Config & version ───────────────────────────────────────────────────────
-import { loadConfig } from '../src/config/loader.js';
-import { VERSION } from '../src/version.js';
+import { loadConfig } from '@confused-ai/config';
+import { VERSION } from 'confused-ai';
 
 // ── Core builder (planner, context) ───────────────────────────────────────
-import { AgentContextBuilder } from '../src/core/context-builder.js';
-import { ToolRegistryImpl } from '../src/tools/registry.js';
-import { ClassicalPlanner, PlanningAlgorithm } from '../src/planner/index.js';
+import { AgentContextBuilder } from 'confused-ai';
+import { ToolRegistryImpl } from 'confused-ai';
+import { ClassicalPlanner, PlanningAlgorithm } from 'confused-ai';
 
 // ──────────────────────────────────────────────────────────────────────────
 // Helpers

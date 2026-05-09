@@ -1,0 +1,67 @@
+---
+title: confused-ai
+description: TypeScript framework for building production-grade AI agents, teams, and services.
+template: splash
+hero:
+  tagline: The only TypeScript AI agent framework with smart defaults AND full control. 50+ tools, multi-agent orchestration, circuit breakers, budget caps, HITL, OTLP — from prototype to enterprise in one package.
+  image:
+    file: ../../assets/logo.svg
+  actions:
+    - text: Get Started
+      link: /guide/getting-started
+      icon: right-arrow
+      variant: primary
+    - text: View Examples
+      link: /examples/index
+      icon: seti:code-search
+      variant: secondary
+    - text: GitHub
+      link: https://github.com/rvuyyuru2/agent-framework
+      icon: github
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+<CardGrid stagger>
+  <Card title="Zero to agent in 3 lines" icon="rocket">
+    `agent('You are helpful.')` → `.run(prompt)` → `result.text`. Smart defaults for LLM, session, tools, and guardrails. Override anything.
+
+    [Quick start →](/guide/getting-started)
+  </Card>
+  <Card title="50+ built-in tools" icon="puzzle">
+    HTTP, browser, email, Slack, Discord, GitHub, PostgreSQL, MySQL, SQLite, Redis, Stripe, CSV, DuckDuckGo, Wikipedia, file system, and more — every tool Zod-validated and tree-shakeable.
+
+    [Browse tools →](/guide/tools)
+  </Card>
+  <Card title="Multi-agent orchestration" icon="random">
+    `compose()`, `pipe()`, AgentRouter, HandoffProtocol, ConsensusProtocol, `createSupervisor()`, `createSwarm()`. Any topology, any strategy — no framework lock-in.
+
+    [Explore orchestration →](/guide/orchestration)
+  </Card>
+  <Card title="RAG in one call" icon="open-book">
+    KnowledgeEngine + TextLoader / JSONLoader / CSVLoader / URLLoader + OpenAI embeddings + InMemoryVectorStore. Full semantic retrieval baked into every agent run.
+
+    [RAG guide →](/guide/rag)
+  </Card>
+  <Card title="Enterprise production-hardened" icon="shield">
+    Circuit breakers, rate limiting, Redis distributed rate limits, USD budget caps, OTLP distributed tracing, W3C trace-context, health checks, graceful shutdown — all opt-in, all composable.
+
+    [Production guide →](/guide/production)
+  </Card>
+  <Card title="Intelligent LLM router" icon="setting">
+    Auto-route by task type and complexity. coding → GPT-4o, simple Q&A → GPT-4o-mini. Four built-in strategies (balanced, cost, quality, speed), custom override rules, full decision history.
+
+    [See LLM routing →](/examples/16-llm-router)
+  </Card>
+  <Card title="Human-in-the-Loop (HITL)" icon="approve-check-circle">
+    Pause execution at high-risk tool calls. `requireApprovalTool()` + ApprovalStore + built-in HTTP endpoints. Approve or reject from any UI — no custom wiring needed.
+
+    [HITL guide →](/guide/hitl)
+  </Card>
+  <Card title="MCP client + server" icon="plug">
+    Connect to any Model Context Protocol server. MCP tools become first-class citizens of the agent loop. Or expose your own tools as an MCP server with one function call.
+
+    [MCP guide →](/guide/mcp)
+  </Card>
+</CardGrid>

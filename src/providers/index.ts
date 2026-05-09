@@ -1,5 +1,9 @@
 /**
  * LLM provider abstraction — types, providers, utilities.
+ *
+ * @deprecated This implementation folder will be merged into `@confused-ai/models` in the
+ *   next major version. Imports will continue to work via this re-export shim.
+ *   Migrate new code to import from `@confused-ai/models` directly.
  */
 
 // Core types
@@ -62,6 +66,22 @@ export {
     createSnowflakeProvider,
     createVllmProvider,
     createLmStudioProvider,
+    // Wave 4 — Chinese frontier providers
+    createHunyuanProvider,
+    createVolcengineProvider,
+    createMinimaxProvider,
+    createBaichuanProvider,
+    createStepfunProvider,
+    createInternLMProvider,
+    // Wave 4 — Global cloud providers
+    createReplicateProvider,
+    createRunPodProvider,
+    createWatsonxProvider,
+    // Wave 4 — Additional self-hosted / local
+    createLocalAIProvider,
+    createKoboldProvider,
+    createTextGenWebUIProvider,
+    createJanProvider,
     // Base URLs (existing)
     GROQ_BASE_URL,
     XAI_BASE_URL,
@@ -90,6 +110,15 @@ export {
     LEPTON_BASE_URL,
     FEATHERLESS_BASE_URL,
     SNOWFLAKE_BASE_URL,
+    // Wave 4 base URLs
+    HUNYUAN_BASE_URL,
+    VOLCENGINE_BASE_URL,
+    MINIMAX_BASE_URL,
+    BAICHUAN_BASE_URL,
+    STEPFUN_BASE_URL,
+    INTERNLM_BASE_URL,
+    REPLICATE_BASE_URL,
+    WATSONX_REGION_URLS,
 } from './compat-providers.js';
 
 export type {
@@ -124,6 +153,20 @@ export type {
     SnowflakeProviderConfig,
     VllmProviderConfig,
     LmStudioProviderConfig,
+    // Wave 4 config types
+    HunyuanProviderConfig,
+    VolcengineProviderConfig,
+    MinimaxProviderConfig,
+    BaichuanProviderConfig,
+    StepfunProviderConfig,
+    InternLMProviderConfig,
+    ReplicateProviderConfig,
+    RunPodProviderConfig,
+    WatsonxProviderConfig,
+    LocalAIProviderConfig,
+    KoboldProviderConfig,
+    TextGenWebUIProviderConfig,
+    JanProviderConfig,
 } from './compat-providers.js';
 
 // ── Model resolution ───────────────────────────────────────────────────────

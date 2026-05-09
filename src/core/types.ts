@@ -152,8 +152,9 @@ export abstract class Agent {
 }
 
 /**
- * Generate a unique identifier
+ * Generate a unique identifier using crypto.randomUUID for security and
+ * uniqueness in distributed systems.
  */
 function generateId(): EntityId {
-    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    return crypto.randomUUID();
 }

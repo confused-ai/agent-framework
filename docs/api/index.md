@@ -12,6 +12,65 @@ Complete reference for all confused-ai packages. Each entry links to the detaile
 
 ## Core — `confused-ai`
 
+### `defineAgent(name)` — typed fluent builder (recommended for typed I/O)
+
+The schema-typed builder introduced in v1.0. Use when you need strict TypeScript types on both input and output.
+
+```ts
+import { defineAgent } from 'confused-ai';
+import { z } from 'zod';
+
+const agent = defineAgent('qa-bot')
+  .model('openai:gpt-4o')
+  .input(z.object({ question: z.string() }))
+  .output(z.object({ answer: z.string(), confidence: z.number() }))
+  .instructions('Answer factually and cite sources.')
+  .tools([webSearchTool])
+  .skills([webResearchSkill])
+  .memory(myMemoryStore)
+  .session(mySessionStore)
+  .maxIterations(15)
+  .timeout(90_000)
+  .handler(async ({ question }, ctx) => {
+    // Optional custom handler — receives validated input + runtime context
+    return { answer: '...', confidence: 0.9 };
+  })
+  .build();
+
+// run() returns TOut & { sessionId, runId }
+const { answer, confidence, runId } = await agent.run({ question: 'What is 2 + 2?' });
+
+// stream() yields AgentStreamEvent objects
+for await (const event of agent.stream({ question: '...' })) {
+  if (event.type === 'text') process.stdout.write(event.content ?? '');
+}
+
+// resume() re-runs from a checkpoint
+const result2 = await agent.resume(runId);
+
+// plan() generates a multi-step plan without executing
+const plan = await agent.plan('Research and summarise quantum computing');
+```
+
+#### Builder method reference
+
+| Method | Type | Description |
+|--------|------|-------------|
+| `.model(ref)` | `` `${string}:${string}` `` | Provider-qualified model, e.g. `"openai:gpt-4o"` |
+| `.input(schema)` | `z.ZodType<T>` → `AgentBuilder<T, TOut>` | Narrows input type `TIn` |
+| `.output(schema)` | `z.ZodType<T>` → `AgentBuilder<TIn, T>` | Narrows output type `TOut` |
+| `.instructions(text)` | `string` | Base system prompt |
+| `.tools(tools)` | `Tool[]` | Tools available at run-time |
+| `.skills(skills)` | `Skill[]` | Capability bundles (instructions + tools) |
+| `.memory(store)` | `MemoryStore` | Cross-turn memory store |
+| `.session(store)` | `SessionStore` | Conversation history store |
+| `.handler(fn)` | `(input, ctx?) => TOut \| Promise<TOut>` | Custom execution handler |
+| `.maxIterations(n)` | `number` | Iteration cap (default 10) |
+| `.timeout(ms)` | `number` | Wall-clock deadline (default 60 000ms) |
+| `.build()` | — | Returns `TypedAgent<TIn, TOut>` |
+
+→ See [Agents guide — defineAgent()](/guide/agents#defineagent-typed-builder) · [Skills guide](/guide/skills)
+
 ### `agent(options)` → `Agent`
 
 Create an agent with the config-object API (most common).
@@ -145,7 +204,7 @@ Batch tool factory.
 
 ---
 
-## Models — `confused-ai/model`
+## Models & Providers — `confused-ai/model`
 
 ### Model shorthand strings
 
@@ -161,12 +220,52 @@ Batch tool factory.
 'gemini-2.0-flash'
 ```
 
+### Provider factory functions
+
+All providers can also be instantiated explicitly for advanced configuration.
+
+| Factory | Package / env auto-detect | Notes |
+|---------|--------------------------|-------|
+| `createOpenAI(opts?)` | `OPENAI_API_KEY` | GPT-4o, o1, o3 |
+| `createAnthropic(opts?)` | `ANTHROPIC_API_KEY` | Claude Opus/Sonnet/Haiku |
+| `createGoogle(opts?)` | `GOOGLE_API_KEY` | Gemini 2.5 Pro/Flash |
+| `createAzureOpenAI(opts)` | `AZURE_OPENAI_*` | Azure-hosted OpenAI |
+| `createBedrock(opts?)` | AWS SDK env vars | All Bedrock models |
+| `createGroq(opts?)` | `GROQ_API_KEY` | Llama-3, Mixtral (ultra-fast) |
+| `createOpenRouter(opts?)` | `OPENROUTER_API_KEY` | 100+ models via one key |
+| `createTogether(opts?)` | `TOGETHER_API_KEY` | Open-source clusters |
+| `createCohere(opts?)` | `COHERE_API_KEY` | Command R+ |
+| `createMistral(opts?)` | `MISTRAL_API_KEY` | Mistral Large/Small |
+| `createDeepseek(opts?)` | `DEEPSEEK_API_KEY` | DeepSeek V3/R1 |
+| `createPerplexity(opts?)` | `PERPLEXITY_API_KEY` | Search-grounded models |
+| `createOllama(opts?)` | `OLLAMA_BASE_URL` | Local inference |
+| `createVllm(opts?)` | `VLLM_BASE_URL` | High-throughput self-hosted |
+| `createLmStudio(opts?)` | `LM_STUDIO_BASE_URL` | LM Studio desktop |
+| `createHuggingFace(opts?)` | `HUGGINGFACE_API_KEY` | HF Inference API |
+| `createXai(opts?)` | `XAI_API_KEY` | xAI Grok |
+| `createFireworks(opts?)` | `FIREWORKS_API_KEY` | Fireworks AI |
+| `createReplicate(opts?)` | `REPLICATE_API_TOKEN` | Replicate models |
+| `createQwen(opts?)` | `DASHSCOPE_API_KEY` | Alibaba Qwen (CN) |
+| `createErnie(opts?)` | `ERNIE_API_KEY` | Baidu ERNIE (CN) |
+| `createCloudflare(opts?)` | `CF_ACCOUNT_ID`, `CF_API_TOKEN` | Workers AI edge inference |
+
+```ts
+import { createGroq, createOllama } from 'confused-ai/model';
+import { agent } from 'confused-ai';
+
+const ai = agent({
+  model: createGroq({ model: 'llama-3.1-70b-versatile', temperature: 0.1 }),
+});
+```
+
 ### `createFallbackChain(models)`
 
 ```ts
 import { createFallbackChain } from 'confused-ai/model';
 const llm = createFallbackChain([{ model: 'gpt-4o' }, { model: 'claude-opus-4-5' }]);
 ```
+
+→ See [Providers guide](/guide/providers) · [LLM Router guide](/guide/llm-router)
 
 ---
 
@@ -291,7 +390,19 @@ const llm = createFallbackChain([{ model: 'gpt-4o' }, { model: 'claude-opus-4-5'
 | `branch(opts)` | Conditional routing |
 | `suspend(ctx, opts)` | Pause workflow until resumed |
 
-→ See [Workflows guide](/guide/workflows)
+## Workflow Control Flow — `confused-ai/workflow`
+
+Higher-level control-flow combinators that compose with any `createWorkflow()` graph.
+
+| Export | Signature | Description |
+|--------|-----------|-------------|
+| `branch(config)` | `(config: { condition, if: Step, else?: Step }) => Step` | Conditional routing — runs `if` or `else` branch |
+| `loopUntil(step, opts)` | `(step: Step, opts: { condition, delayMs?, maxAttempts?, onTimeout? }) => Step` | Repeat step until condition is satisfied |
+| `forEach(step, opts?)` | `(step: Step, opts?: { concurrency?, onError? }) => Step` | Fan-out over array input |
+| `race(steps, opts?)` | `(steps: Step[], opts?: { timeoutMs? }) => Step` | Run all in parallel, return first winner |
+| `retry(step, opts?)` | `(step: Step, opts?: { maxAttempts, backoff?, shouldRetry? }) => Step` | Retry step with backoff on failure |
+
+→ See [Workflow Branching guide](/guide/workflow-branching) · [Workflows guide](/guide/workflows)
 
 ---
 
@@ -454,6 +565,82 @@ console.log(result.markdown.type);      // "markdown"
 | `createTools(defs)` | Function | Batch tool factory |
 | `ToolBuilder` | Class | Fluent builder class (from `defineTool()`) |
 | `LightweightTool` | Interface | Return type of all tool factories |
+
+## Tool Composition — `confused-ai/tools`
+
+Combine existing tools into new tools without modifying them. All combinators return a `LightweightTool`.
+
+| Export | Signature | Description |
+|--------|-----------|-------------|
+| `composeTool(tools, opts)` | `(tools: Tool[], opts: { name, description, schema, select }) => Tool` | Fan out to all tools, pick the best result |
+| `parallelTools(tools, opts?)` | `(tools: Tool[], opts?: { name, description, allowPartial }) => Tool` | Run all tools concurrently, return array of results |
+| `fallbackTool(tools, opts?)` | `(tools: Tool[], opts?: { isFailure? }) => Tool` | Try each tool in order until one succeeds |
+| `retryTool(tool, opts?)` | `(tool: Tool, opts?: { maxAttempts, backoff, onRetry }) => Tool` | Retry on failure with optional backoff |
+| `timeoutTool(tool, ms)` | `(tool: Tool, ms: number) => Tool` | Abort if the tool takes longer than `ms` |
+| `mapTool(tool, opts)` | `(tool: Tool, opts: { input?, output? }) => Tool` | Transform input before / output after execution |
+| `filterTool(tool, opts)` | `(tool: Tool, opts: { pick?, omit? }) => Tool` | Restrict which output fields are returned |
+
+→ See [Tool Composition guide](/guide/tool-composition)
+
+## Stream Utilities — `confused-ai/models`
+
+Composable stream transformers for `AsyncIterable<StreamChunk>`.
+
+| Export | Signature | Description |
+|--------|-----------|-------------|
+| `streamToText(stream)` | `(stream: AsyncIterable<StreamChunk>) => Promise<string>` | Collect all chunks into a single string |
+| `streamToChunks(stream)` | `(stream: AsyncIterable<StreamChunk>) => Promise<StreamChunk[]>` | Collect chunks into an array |
+| `streamToSSE(stream, res)` | `(stream, res: Response) => Promise<void>` | Write SSE events to an HTTP response |
+| `streamWithBudget(stream, opts)` | `(stream, opts: { maxTokens, truncateAt? }) => AsyncIterable<StreamChunk>` | Stop streaming after `maxTokens` |
+| `streamTee(stream)` | `(stream: AsyncIterable<StreamChunk>) => [AsyncIterable, AsyncIterable]` | Fork into two independent consumers |
+| `streamMap(stream, fn)` | `(stream, fn: (chunk) => StreamChunk) => AsyncIterable<StreamChunk>` | Transform each chunk |
+| `streamFilter(stream, fn)` | `(stream, fn: (chunk) => boolean) => AsyncIterable<StreamChunk>` | Discard non-matching chunks |
+| `streamMerge(streams)` | `(streams: AsyncIterable<StreamChunk>[]) => AsyncIterable<StreamChunk>` | Interleave multiple streams |
+| `streamToNodeCallback(stream, cb)` | `(stream, cb: (err, done, chunk) => void) => Promise<void>` | Bridge to Node.js callback-style APIs |
+
+→ See [Stream Utilities guide](/guide/stream-utils)
+
+## Skills — `confused-ai/skills`
+
+Drop-in capability bundles. Each skill is a `{ instructions, tools, hooks }` object that can be applied to any agent.
+
+| Export | Description |
+|--------|-------------|
+| `webResearchSkill` | Web search + summarise + cite — powered by `httpTool`, `browserTool`, `markdownExtractTool` |
+| `pdfSummarizerSkill` | Extract, chunk, summarise PDFs — powered by `pdfReadTool` |
+| `codeReviewerSkill` | Static analysis + best-practice feedback on code snippets |
+| `applySkill(agent, skill)` | Low-level utility — merge a skill into an existing agent config |
+
+```ts
+import { defineAgent } from 'confused-ai';
+import { webResearchSkill, codeReviewerSkill } from 'confused-ai/skills';
+
+const agent = defineAgent('researcher')
+  .model('openai:gpt-4o')
+  .skills([webResearchSkill, codeReviewerSkill])
+  .build();
+```
+
+→ See [Skills guide](/guide/skills)
+
+## Evaluation & Benchmarking — `confused-ai/eval`
+
+| Export | Signature | Description |
+|--------|-----------|-------------|
+| `runBenchmark(config)` | `(config: BenchmarkConfig) => Promise<BenchmarkReport>` | Run a benchmark suite, collect per-case scores |
+| `formatBenchmarkReport(report)` | `(report: BenchmarkReport) => string` | Format as a Markdown table |
+| `runEvalSuite(config)` | `(config: EvalSuiteConfig) => Promise<EvalSuiteResult>` | CI-friendly regression guard |
+| `exactMatchScorer(opts?)` | `Scorer` | Case-sensitive / case-insensitive equality |
+| `containsScorer(opts?)` | `Scorer` | Substring / token presence |
+| `wordOverlapScorer(opts?)` | `Scorer` | Jaccard word-overlap |
+| `rougeLScorer(opts?)` | `Scorer` | ROUGE-L LCS-based score |
+| `llmJudgeScorer(opts)` | `Scorer` | Use an LLM to score output quality 0-1 |
+| `customScorer(fn)` | `Scorer` | Wrap any `(expected, actual) => number` function |
+| `EvalStore` | Interface | Store eval results for trend analysis |
+| `InMemoryEvalStore` | Class | Dev eval store |
+| `FileEvalStore` | Class | JSON-on-disk eval store |
+
+→ See [Evaluation guide](/guide/eval)
 
 ## Knowledge
 

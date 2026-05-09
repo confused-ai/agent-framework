@@ -118,6 +118,6 @@ export class ConsoleLogger implements Logger {
     }
 
     private generateId(): string {
-        return `log-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        return `log-${crypto.randomUUID()}`;
     }
 }

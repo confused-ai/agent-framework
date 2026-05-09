@@ -1,7 +1,7 @@
 /**
  * Minimal agent using the framework.
  *
- * Uses the lean `create-agent` entry (in apps: `import { createAgent } from "confused-ai/create-agent"`).
+ * Uses the `agent()` headline API: `import { agent } from "confused-ai"`.
  *
  * Requires: OPENAI_API_KEY in `examples/.env` (or your env) — see `resolveLlmForCreateAgent`.
  *
@@ -17,27 +17,20 @@ config({
     quiet: true,
 });
 
-import { createAgent } from '../src/create-agent.js';
-import { LearningMode } from '../src/learning/types.js';
-import { InMemorySessionStore } from '../src/session/index.js';
-import { HttpClientTool } from '../src/tools/http-tool.js';
-import { BrowserTool } from '../src/tools/browser-tool.js';
+import { agent, InMemorySessionStore } from 'confused-ai';
 
 async function main() {
-    const agent = createAgent({
+    const myAgent = agent({
         name: 'SimpleAssistant',
         instructions: 'You are a helpful assistant. Be concise.',
         /** No tools — chat only. Add HttpClientTool, etc. from `confused-ai/tools` when needed. */
         tools: [],
         dev: true,
-        learningMode: LearningMode.AGENTIC,
         sessionStore: new InMemorySessionStore(),
-
-      
     });
 
     const prompt = process.argv.slice(2).join(' ') || 'What is 2+2? Reply in one short sentence.';
-    const result = await agent.run(prompt);
+    const result = await myAgent.run(prompt);
 
     console.log('\n--- reply ---\n');
     console.log(result.text);

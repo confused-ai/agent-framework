@@ -1,0 +1,33 @@
+/* =========================================================
+   confused-ai — Starlight theme
+   Default Starlight colors + minimal hero/card tweaks only
+   ========================================================= */
+
+/* ── Hero title gradient ─────────────────────────────────── */
+.hero h1,
+.hero .sl-flex h1 {
+    background: linear-gradient(135deg, #7c3aed 0%, #0891b2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ── Primary button ──────────────────────────────────────── */
+a.sl-button[data-variant='primary'] {
+    background: linear-gradient(135deg, #7c3aed 0%, #0891b2 100%) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    font-weight: 600;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+a.sl-button[data-variant='primary']:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+/* ── Card hover ──────────────────────────────────────────── */
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}

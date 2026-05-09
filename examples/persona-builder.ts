@@ -24,11 +24,11 @@ config({
     quiet: true,
 });
 
-import { Agent } from '../src/agent.js';
-import { definePersona } from '../src/dx/persona-builder.js';
-import { SessionState } from '../src/session/types.js';
-import type { SessionStore } from '../src/session/types.js';
-import type { AgenticRunResult } from '../src/agentic/types.js';
+import { Agent } from 'confused-ai';
+import { definePersona } from 'confused-ai';
+import { SessionState } from '@confused-ai/session';
+import type { SessionStore } from '@confused-ai/session';
+import type { AgenticRunResult } from 'confused-ai';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, 'data');

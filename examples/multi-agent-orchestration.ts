@@ -23,7 +23,7 @@ import {
   type LLMOptions,
   type LLMResponse,
   type NodeContext,
-} from '../src/graph/index.js';
+} from '@confused-ai/graph';
 
 // ── Mock LLM Provider ───────────────────────────────────────────────────────
 

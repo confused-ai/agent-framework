@@ -62,6 +62,9 @@ export default defineConfig({
                     { text: '🧩 Plugins', link: '/guide/plugins' },
                     { text: '🤝 MCP Client', link: '/guide/mcp' },
                     { text: '🔁 LLM Router', link: '/guide/llm-router' },
+                    { text: '🏗️ Providers (40+)', link: '/guide/providers' },
+                    { text: '🎯 Skills', link: '/guide/skills' },
+                    { text: '📊 Evaluation', link: '/guide/eval' },
                 ],
             },
             {
@@ -89,11 +92,21 @@ export default defineConfig({
                     ],
                 },
                 {
+                    text: 'LLM Providers',
+                    collapsed: false,
+                    items: [
+                        { text: 'Providers (40+)', link: '/guide/providers' },
+                        { text: 'LLM Router', link: '/guide/llm-router' },
+                    ],
+                },
+                {
                     text: 'Building Agents',
                     collapsed: false,
                     items: [
                         { text: 'Creating Agents', link: '/guide/agents' },
+                        { text: 'Skills', link: '/guide/skills' },
                         { text: 'Built-in Tools (100+)', link: '/guide/tools' },
+                        { text: 'Tool Composition', link: '/guide/tool-composition' },
                         { text: 'Custom Tools', link: '/guide/custom-tools' },
                         { text: 'Lifecycle Hooks', link: '/guide/hooks' },
                         { text: 'Compose & Pipe', link: '/guide/compose' },
@@ -129,8 +142,8 @@ export default defineConfig({
                     items: [
                         { text: 'Orchestration', link: '/guide/orchestration' },
                         { text: 'Execution Workflows', link: '/guide/workflows' },
+                        { text: 'Workflow Branching', link: '/guide/workflow-branching' },
                         { text: 'Graph Engine', link: '/guide/graph' },
-                        { text: 'LLM Router', link: '/guide/llm-router' },
                         { text: 'MCP Client & Server', link: '/guide/mcp' },
                     ],
                 },
@@ -139,17 +152,25 @@ export default defineConfig({
                     collapsed: true,
                     items: [
                         { text: 'Artifacts', link: '/guide/artifacts' },
+                        { text: 'Stream Utilities', link: '/guide/stream-utils' },
                         { text: 'Voice (TTS/STT)', link: '/guide/voice' },
                         { text: 'Video Generation', link: '/guide/video' },
+                    ],
+                },
+                {
+                    text: 'Quality & Testing',
+                    collapsed: false,
+                    items: [
+                        { text: 'Evaluation & Benchmarking', link: '/guide/eval' },
+                        { text: 'Guardrails & Safety', link: '/guide/guardrails' },
+                        { text: 'Human-in-the-Loop (HITL)', link: '/guide/hitl' },
                     ],
                 },
                 {
                     text: 'Enterprise Production',
                     collapsed: false,
                     items: [
-                        { text: 'Guardrails & Safety', link: '/guide/guardrails' },
                         { text: 'Resilience & Circuit Breakers', link: '/guide/production' },
-                        { text: 'Human-in-the-Loop (HITL)', link: '/guide/hitl' },
                         { text: 'Observability & OTLP', link: '/guide/observability' },
                         { text: 'Budget Enforcement', link: '/guide/production#budget-enforcement' },
                         { text: 'Multi-Tenancy', link: '/guide/multi-tenancy' },
@@ -205,6 +226,15 @@ export default defineConfig({
                     items: [
                         { text: '17 · Full Framework Showcase', link: '/examples/17-full-framework-showcase' },
                         { text: '18 · Meridian Platform', link: '/examples/18-meridian-platform' },
+                    ],
+                },
+                {
+                    text: 'Intelligence & Automation',
+                    items: [
+                        { text: '19 · Incident Triage Bot', link: '/examples/19-reasoning' },
+                        { text: '20 · Scheduled Agent Jobs', link: '/examples/20-scheduled-agents' },
+                        { text: '21 · Code Review Pipeline', link: '/examples/21-code-review-pipeline' },
+                        { text: '22 · Eval Regression Guard', link: '/examples/22-eval-ci' },
                     ],
                 },
             ],

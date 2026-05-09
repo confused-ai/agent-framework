@@ -19,7 +19,6 @@ export interface BedrockConverseProviderConfig {
     /** Bedrock model or inference profile id (e.g. anthropic.claude-3-5-sonnet-20240620-v1:0). */
     readonly modelId: string;
     /** Optional client instance; if omitted, one is created with default credential chain. */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     readonly client?: any;
 }
 
@@ -39,7 +38,6 @@ function flattenText(m: Message): string {
 export class BedrockConverseProvider implements LLMProvider {
     private readonly region: string;
     private readonly modelId: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private client: any;
 
     constructor(config: BedrockConverseProviderConfig) {
@@ -48,7 +46,6 @@ export class BedrockConverseProvider implements LLMProvider {
         this.client = config.client ?? null;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private async ensureClient(): Promise<any> {
         if (this.client) {
             return this.client;

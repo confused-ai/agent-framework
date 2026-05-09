@@ -1,6 +1,10 @@
 /**
  * Best DX for creating agents in TypeScript.
  *
+ * @deprecated This implementation folder will be merged into `@confused-ai/sdk` in the
+ *   next major version. Imports will continue to work via this re-export shim.
+ *   Migrate new code to import from `@confused-ai/sdk` directly.
+ *
  * - agent(instructions) or agent({ instructions, model, dev }) — minimal, one call
  * - bare({ llm }) — zero defaults, bring your own everything
  * - defineAgent().instructions('...').model('...').use(mw).hooks({...}).dev().build() — fluent, discoverable

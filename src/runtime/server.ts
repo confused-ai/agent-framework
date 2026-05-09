@@ -1,6 +1,6 @@
 import http from 'node:http';
 import type { IncomingMessage } from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { CreateAgentResult } from '../create-agent.js';
 import type { CreateHttpServiceOptions, HttpService, RequestAuditEntry } from './types.js';
 import { getRuntimeOpenApiJson } from './openapi.js';
@@ -9,7 +9,8 @@ import type { AuditEntry } from '../production/audit-store.js';
 import type { IdempotencyStore } from '../production/idempotency.js';
 import { InMemoryIdempotencyStore } from '../production/idempotency.js';
 import { attachWebSocketTransport } from './ws-transport.js';
-import { createAdminHandler, type AdminStats } from './admin.js';import { extractTraceContext } from '../observability/trace-context.js';
+import { createAdminHandler, type AdminStats } from './admin.js';
+import { extractTraceContext } from '../observability/trace-context.js';
 const CORS_HEADERS =
     'Content-Type, Accept, X-Session-Id, X-User-Id, X-Request-Id';
 
@@ -66,6 +67,48 @@ function readBody(req: http.IncomingMessage, maxBytes = 1_048_576): Promise<stri
     });
 }
 
+function firstHeaderValue(value: string | string[] | undefined): string | undefined {
+    return Array.isArray(value) ? value[0] : value;
+}
+
+function forwardedClientIp(req: IncomingMessage): string | undefined {
+    const forwarded = firstHeaderValue(req.headers['x-forwarded-for']);
+    return forwarded?.split(',')[0]?.trim() || undefined;
+}
+
+function getClientIp(req: IncomingMessage, trustProxy: boolean): string | undefined {
+    return trustProxy ? (forwardedClientIp(req) || req.socket.remoteAddress || undefined) : (req.socket.remoteAddress || undefined);
+}
+
+function buildIdempotencyCacheKey(input: {
+    rawKey: string;
+    method: string;
+    path: string;
+    identity?: string;
+    clientIp?: string;
+    agentName: string;
+    sessionId?: string;
+    userId?: string;
+    message: string;
+    stream: boolean;
+}): string {
+    const fingerprint = createHash('sha256')
+        .update(JSON.stringify({
+            method: input.method,
+            path: input.path,
+            identity: input.identity ?? '',
+            clientIp: input.clientIp ?? '',
+            agentName: input.agentName,
+            sessionId: input.sessionId ?? '',
+            userId: input.userId ?? '',
+            message: input.message,
+            stream: input.stream,
+        }))
+        .digest('hex');
+
+    return `idemp:v2:${input.rawKey}:${fingerprint}`;
+}
+
 const AUDIT_MAX = 500;
 
 /**
@@ -93,6 +136,7 @@ export function createHttpService(
         : null;
     const idempotencyTtlMs = idempotencyOpts?.ttlMs ?? 86_400_000; // 24 hours
     const idempotencyHeader = idempotencyOpts?.headerName?.toLowerCase() ?? 'x-idempotency-key';
+    const trustProxy = options.trustProxy === true;
 
     // Persistent audit store (optional — falls back to in-memory array)
     const auditStore = options.auditStore ?? null;
@@ -122,7 +166,7 @@ export function createHttpService(
         const path = (req.url ?? '/').split('?')[0] ?? '/';
         const method = req.method ?? 'GET';
         // Assign a correlation ID for every request — echo client-supplied or generate one
-        const rid = (req.headers['x-request-id'] as string | undefined) || randomUUID();
+        const rid = firstHeaderValue(req.headers['x-request-id']) || randomUUID();
         res.setHeader('X-Request-ID', rid);
 
         if (cors && method === 'OPTIONS') {
@@ -148,8 +192,7 @@ export function createHttpService(
         if (options.rateLimit && path !== '/health' && path !== '/v1/health') {
             const rateLimitKey =
                 authIdentity ||
-                (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ||
-                req.socket.remoteAddress ||
+                getClientIp(req, trustProxy) ||
                 'unknown';
             try {
                 await options.rateLimit.check(rateLimitKey);
@@ -191,7 +234,7 @@ export function createHttpService(
                     status: entry.status,
                     agentName: entry.agent,
                     sessionId: entry.sessionId,
-                    ip: (req.headers['x-forwarded-for'] as string | undefined) || (req.socket?.remoteAddress),
+                    ip: getClientIp(req, trustProxy),
                 };
                 auditStore.append(auditEntry).catch(() => { /* fire-and-forget */ });
             } else {
@@ -347,9 +390,29 @@ export function createHttpService(
                 }
 
                 // ── Idempotency check ─────────────────────────────────────
-                const idempotencyKey = req.headers[idempotencyHeader] as string | undefined;
-                if (idempotencyStore && idempotencyKey) {
-                    const cached = await idempotencyStore.get(idempotencyKey);
+                const sessionHeader = firstHeaderValue(req.headers['x-session-id']);
+                const accept = req.headers.accept;
+                const wantsStream =
+                    body.stream === true ||
+                    (typeof accept === 'string' && accept.includes('text/event-stream'));
+                const rawIdempotencyKey = firstHeaderValue(req.headers[idempotencyHeader]);
+                const scopedIdempotencyKey =
+                    rawIdempotencyKey && idempotencyStore
+                        ? buildIdempotencyCacheKey({
+                              rawKey: rawIdempotencyKey,
+                              method,
+                              path,
+                              identity: authIdentity,
+                              clientIp: getClientIp(req, trustProxy),
+                              agentName,
+                              sessionId: body.sessionId ?? sessionHeader,
+                              userId: body.userId,
+                              message: body.message,
+                              stream: wantsStream,
+                          })
+                        : undefined;
+                if (idempotencyStore && scopedIdempotencyKey) {
+                    const cached = await idempotencyStore.get(scopedIdempotencyKey);
                     if (cached) {
                         // Return cached response without re-running the agent
                         res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -365,19 +428,13 @@ export function createHttpService(
                 const agent = map[agentName]!;
                 const sessionId =
                     body.sessionId ||
-                    (req.headers['x-session-id'] as string | undefined) ||
+                    sessionHeader ||
                     (await agent.createSession(body.userId));
 
                 // ── W3C Trace Context extraction ──────────────────────────
                 const incomingTrace = extractTraceContext(
                     req.headers as Record<string, string | string[] | undefined>
                 );
-
-                // rid is already set at the top of the request handler
-                const accept = req.headers.accept;
-                const wantsStream =
-                    body.stream === true ||
-                    (typeof accept === 'string' && accept.includes('text/event-stream'));
 
                 if (wantsStream) {
                     if (cors) {
@@ -437,8 +494,8 @@ export function createHttpService(
                 });
 
                 // Cache response for idempotency
-                if (idempotencyStore && idempotencyKey) {
-                    await idempotencyStore.set(idempotencyKey, 200, responseBody, idempotencyTtlMs).catch(() => {
+                if (idempotencyStore && scopedIdempotencyKey) {
+                    await idempotencyStore.set(scopedIdempotencyKey, 200, responseBody, idempotencyTtlMs).catch(() => {
                         /* fire-and-forget */
                     });
                 }

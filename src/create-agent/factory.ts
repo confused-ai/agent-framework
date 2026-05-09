@@ -24,16 +24,17 @@ import { isMultiModalInput, multiModalToMessage } from '../providers/vision.js';
 
 /**
  * Resolves the tools option to a ToolRegistry.
- * - `false` → empty registry (pure text reasoning)
- * - `[]`    → empty registry
- * - omitted (`undefined`) → default [HttpClientTool, BrowserTool]
- * - array / registry → use as-is; LightweightTool instances are auto-converted
+ * - omitted (`undefined`) → empty registry (no tools, pure text reasoning)
+ * - `false`             → empty registry (no tools)
+ * - `[]`               → empty registry
+ * - `'web'`            → preset: [HttpClientTool, BrowserTool]
+ * - array / registry   → use as-is; LightweightTool instances are auto-converted
  */
 function resolveTools(toolsOption: CreateAgentOptions['tools']): ReturnType<typeof toToolRegistry> {
-    if (toolsOption === false) {
+    if (toolsOption === false || toolsOption === undefined) {
         return toToolRegistry([]);
     }
-    if (toolsOption === undefined) {
+    if (toolsOption === 'web') {
         return toToolRegistry([new HttpClientTool(), new BrowserTool()] as ToolProvider);
     }
     // Auto-convert any LightweightTool (tool() / defineTool()) in the array
@@ -92,7 +93,6 @@ function getFrameworkConfig(): AppConfig | null {
     if (_cachedConfig === undefined) {
         try {
             // Dynamic import to avoid circular dependency at module load time
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
             const { loadConfig } = require('@confused-ai/config') as typeof import('@confused-ai/config');
             _cachedConfig = loadConfig();
         } catch {
@@ -104,6 +104,11 @@ function getFrameworkConfig(): AppConfig | null {
 
 /**
  * One-line production agent. Wires LLM (from env or options), tools, session store, and optional guardrails.
+ *
+ * @deprecated Prefer the `agent()` helper from `confused-ai` — it has the same
+ * surface area with a shorter call: `agent('You are helpful.')` or
+ * `agent({ instructions: '...', model: 'openai:gpt-4o', tools: [] })`.
+ * `createAgent()` will be removed in v2.0.
  *
  * All defaults are explicitly escapable:
  * - `tools: false`        → pure text reasoning (no tools)
@@ -316,9 +321,22 @@ export function createAgent(options: CreateAgentOptions): CreateAgentResult {
             }
             return sessionStore.getMessages(sessionId);
         },
+        resume(sessionId: string) {
+            const self = this as import('./types.js').CreateAgentResult;
+            return {
+                run(prompt: string | import('../providers/vision.js').MultiModalInput, options?: Omit<import('./types.js').AgentRunOptions, 'sessionId'>) {
+                    return self.run(prompt, { ...options, sessionId });
+                },
+                stream(prompt: string | import('../providers/vision.js').MultiModalInput, options?: Omit<import('./types.js').AgentRunOptions, 'sessionId' | 'onChunk'>) {
+                    return self.stream(prompt, { ...options, sessionId });
+                },
+                streamEvents(prompt: string | import('../providers/vision.js').MultiModalInput, options?: Omit<import('./types.js').AgentRunOptions, 'sessionId' | 'onChunk'>) {
+                    return self.streamEvents(prompt, { ...options, sessionId });
+                },
+            };
+        },
         stream(prompt: string | import('../providers/vision.js').MultiModalInput, runOptions?: Omit<AgentRunOptions, 'onChunk'>) {
             // `this` is the CreateAgentResult object — bound at call time via method shorthand
-            // eslint-disable-next-line @typescript-eslint/no-this-alias
             const self = this as import('./types.js').CreateAgentResult;
 
             async function* generate(): AsyncGenerator<string> {
@@ -365,7 +383,6 @@ export function createAgent(options: CreateAgentOptions): CreateAgentResult {
             };
         },
         streamEvents(prompt: string | import('../providers/vision.js').MultiModalInput, runOptions?: Omit<AgentRunOptions, 'onChunk'>) {
-            // eslint-disable-next-line @typescript-eslint/no-this-alias
             const self = this as import('./types.js').CreateAgentResult;
 
             async function* generate(): AsyncGenerator<StreamChunk> {

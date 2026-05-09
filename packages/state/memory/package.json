@@ -1,0 +1,49 @@
+{
+  "name": "@confused-ai/memory",
+  "version": "0.1.0",
+  "description": "Long-term memory and vector storage for confused-ai agents",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@confused-ai/contracts": "*",
+    "@confused-ai/core": "*",
+    "@confused-ai/shared": "*"
+  },
+  "peerDependencies": {
+    "@pinecone-database/pinecone": ">=3.0.0",
+    "pg": ">=8.0.0",
+    "@confused-ai/db": "*"
+  },
+  "peerDependenciesMeta": {
+    "@pinecone-database/pinecone": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    },
+    "@confused-ai/db": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.0"
+  },
+  "files": [
+    "dist"
+  ]
+}

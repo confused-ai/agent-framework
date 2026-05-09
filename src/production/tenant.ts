@@ -206,7 +206,6 @@ export function createTenantContext(
 
 function createFallbackSessionStore(): SessionStore {
     // Lazy import to avoid circular deps
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { InMemorySessionStore } = require('@confused-ai/session') as { InMemorySessionStore: new () => SessionStore };
     return new InMemorySessionStore();
 }

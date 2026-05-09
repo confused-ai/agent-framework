@@ -1,13 +1,29 @@
 /**
  * confused-ai — root entry point.
  *
- * Prefer importing directly from workspace packages for new code:
+ * Quick start:
+ *   import { agent } from 'confused-ai';
+ *   const bot = agent('You are helpful.');
+ *   const { text } = await bot.run('Hello!');
  *
+ * For fine-grained control, import directly from workspace packages:
  *   import { createAgent }          from '@confused-ai/core';
  *   import { InMemorySessionStore } from '@confused-ai/session';
  *   import { httpClient }           from '@confused-ai/tools';
  *   import { createSwarm }          from '@confused-ai/workflow';
  */
+
+// ── Headline API ───────────────────────────────────────────────────────────────
+// `agent()` is the one-call entry point. Use it for all new code.
+export { agent, bare, compose, pipe, definePersona, buildPersonaInstructions, createDevLogger, createDevToolMiddleware } from './dx/index.js';
+export type { AgentMinimalOptions, BareAgentOptions, ComposeOptions, ComposedAgent, AgentPersona } from './dx/index.js';
+
+// ── Class-based Agent (classic DX) ─────────────────────────────────────────────
+export { Agent } from './agent.js';
+
+// ── createAgent (legacy) — use agent() instead ─────────────────────────────────
+export { createAgent } from './create-agent.js';
+export type { CreateAgentOptions, CreateAgentResult } from './create-agent.js';
 
 // ── Core framework ─────────────────────────────────────────────────────────────
 export * from './core/index.js';

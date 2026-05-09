@@ -11,32 +11,32 @@ import { fileURLToPath } from 'node:url';
 import { config } from 'dotenv';
 import { z } from 'zod';
 
-import { createAgent, resolveLlmForCreateAgent } from '../src/create-agent.js';
-import { InMemorySessionStore } from '../src/session/index.js';
-import { CalculatorAddTool } from '../src/tools/calculator-tool.js';
-import { GuardrailValidator, createSensitiveDataRule } from '../src/guardrails/index.js';
-import { ConsoleLogger } from '../src/observability/console-logger.js';
-import { LogLevel } from '../src/observability/types.js';
-import { MetricsCollectorImpl } from '../src/observability/metrics.js';
-import { InMemoryStore, MemoryType } from '../src/memory/index.js';
-import { ToolRegistryImpl } from '../src/tools/registry.js';
-import { ClassicalPlanner, PlanningAlgorithm } from '../src/planner/index.js';
+import { createAgent, resolveLlmForCreateAgent } from 'confused-ai';
+import { InMemorySessionStore } from 'confused-ai';
+import { CalculatorAddTool } from 'confused-ai';
+import { GuardrailValidator, createSensitiveDataRule } from 'confused-ai';
+import { ConsoleLogger } from 'confused-ai';
+import { LogLevel } from 'confused-ai';
+import { MetricsCollectorImpl } from 'confused-ai';
+import { InMemoryStore, MemoryType } from 'confused-ai';
+import { ToolRegistryImpl } from 'confused-ai';
+import { ClassicalPlanner, PlanningAlgorithm } from 'confused-ai';
 import {
     defineAgent,
     createWorkflow,
     asOrchestratorAgent,
     type DefinedAgent,
-} from '../src/sdk/index.js';
-import { createPipeline } from '../src/orchestration/pipeline.js';
-import { AgentContextBuilder } from '../src/core/context-builder.js';
+} from 'confused-ai';
+import { createPipeline } from 'confused-ai';
+import { AgentContextBuilder } from 'confused-ai';
 import {
     HealthCheckManager,
     HealthStatus,
     createSessionStoreHealthCheck,
     createCustomHealthCheck,
-} from '../src/production/health.js';
-import { createHttpService, listenService, getRuntimeOpenApiJson } from '../src/runtime/index.js';
-import { VERSION } from '../src/version.js';
+} from '@confused-ai/production';
+import { createHttpService, listenService, getRuntimeOpenApiJson } from '@confused-ai/serve';
+import { VERSION } from 'confused-ai';
 
 config({
     path: path.join(path.dirname(fileURLToPath(import.meta.url)), '.env'),

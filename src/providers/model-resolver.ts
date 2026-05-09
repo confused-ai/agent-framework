@@ -6,7 +6,10 @@
  *   deepseek, mistral, cohere, perplexity, openrouter, ollama,
  *   azure, llamabarn, cerebras, sambanova, nvidia, ai21,
  *   hyperbolic, lambda, moonshot, dashscope, zhipu, yi,
- *   upstage, novita, writer
+ *   upstage, novita, writer, cloudflare, deepinfra, replicate,
+ *   huggingface, lepton, vllm, lmstudio, snowflake, watsonx,
+ *   featherless, hunyuan, volcengine, minimax, baichuan,
+ *   stepfun, internlm, runpod, localai, kobold, textgenwebui, jan
  */
 
 export const PROVIDER = {
@@ -50,6 +53,20 @@ export const PROVIDER = {
     SNOWFLAKE: 'snowflake',
     WATSONX: 'watsonx',
     FEATHERLESS: 'featherless',
+    // ── Wave 4 — Chinese frontier ────────────────────────────────
+    HUNYUAN: 'hunyuan',
+    VOLCENGINE: 'volcengine',
+    MINIMAX: 'minimax',
+    BAICHUAN: 'baichuan',
+    STEPFUN: 'stepfun',
+    INTERNLM: 'internlm',
+    // ── Wave 4 — Global cloud ────────────────────────────────────
+    RUNPOD: 'runpod',
+    // ── Additional self-hosted ─────────────────────────────────────────────
+    LOCALAI: 'localai',
+    KOBOLD: 'kobold',
+    TEXTGENWEBUI: 'textgenwebui',
+    JAN: 'jan',
 } as const;
 
 export type ProviderName = (typeof PROVIDER)[keyof typeof PROVIDER];
@@ -88,6 +105,19 @@ export const LMSTUDIO_BASE_URL = 'http://localhost:1234/v1';
 export const SNOWFLAKE_BASE_URL = 'https://cortex.snowflake.com/v1';
 export const WATSONX_BASE_URL = 'https://us-south.ml.cloud.ibm.com/ml/v1/text/generation';
 export const FEATHERLESS_BASE_URL = 'https://api.featherless.ai/v1';
+// Wave 4 Chinese
+export const HUNYUAN_BASE_URL = 'https://api.hunyuan.cloud.tencent.com/v1';
+export const VOLCENGINE_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
+export const MINIMAX_BASE_URL = 'https://api.minimax.chat/v1';
+export const BAICHUAN_BASE_URL = 'https://api.baichuan-ai.com/v1';
+export const STEPFUN_BASE_URL = 'https://api.stepfun.com/v1';
+export const INTERNLM_BASE_URL = 'https://internlm-chat.intern-ai.org.cn/puyu/api/v1';
+// Wave 4 global / self-hosted
+export const REPLICATE_COMPAT_BASE_URL = 'https://openai-compat.replicate.com/v1';
+export const LOCALAI_BASE_URL = 'http://localhost:8080/v1';
+export const KOBOLD_BASE_URL = 'http://localhost:5001/v1';
+export const TEXTGENWEBUI_BASE_URL = 'http://localhost:7860/v1';
+export const JAN_BASE_URL = 'http://localhost:1337/v1';
 
 // ── Env var names ──────────────────────────────────────────────────────────
 
@@ -126,6 +156,14 @@ const ENV: Record<string, string> = {
     SNOWFLAKE: 'SNOWFLAKE_API_KEY',
     WATSONX: 'WATSONX_API_KEY',
     FEATHERLESS: 'FEATHERLESS_API_KEY',
+    // Wave 4
+    HUNYUAN: 'HUNYUAN_API_KEY',
+    VOLCENGINE: 'VOLCENGINE_API_KEY',
+    MINIMAX: 'MINIMAX_API_KEY',
+    BAICHUAN: 'BAICHUAN_API_KEY',
+    STEPFUN: 'STEPFUN_API_KEY',
+    INTERNLM: 'INTERNLM_API_KEY',
+    RUNPOD: 'RUNPOD_API_KEY',
 };
 
 export interface ResolvedModelConfig {
@@ -305,6 +343,68 @@ export function resolveModelString(
 
         case PROVIDER.FEATHERLESS:
             return { baseURL: FEATHERLESS_BASE_URL, apiKey: env(ge, ENV.FEATHERLESS), model: modelId };
+
+        case PROVIDER.HUNYUAN:
+            return { baseURL: HUNYUAN_BASE_URL, apiKey: env(ge, ENV.HUNYUAN), model: modelId };
+
+        case PROVIDER.VOLCENGINE:
+            return {
+                baseURL: VOLCENGINE_BASE_URL,
+                apiKey: env(ge, ENV.VOLCENGINE) ?? env(ge, 'ARK_API_KEY'),
+                model: modelId,
+            };
+
+        case PROVIDER.MINIMAX:
+            return { baseURL: MINIMAX_BASE_URL, apiKey: env(ge, ENV.MINIMAX), model: modelId };
+
+        case PROVIDER.BAICHUAN:
+            return { baseURL: BAICHUAN_BASE_URL, apiKey: env(ge, ENV.BAICHUAN), model: modelId };
+
+        case PROVIDER.STEPFUN:
+            return { baseURL: STEPFUN_BASE_URL, apiKey: env(ge, ENV.STEPFUN), model: modelId };
+
+        case PROVIDER.INTERNLM:
+            return { baseURL: INTERNLM_BASE_URL, apiKey: env(ge, ENV.INTERNLM), model: modelId };
+
+        case PROVIDER.RUNPOD: {
+            // format: runpod:endpointId/model or runpod:endpointId
+            const slash = modelId.indexOf('/');
+            const endpointId = slash > 0 ? modelId.slice(0, slash) : modelId;
+            const rpModel = slash > 0 ? modelId.slice(slash + 1) : 'default';
+            return {
+                baseURL: `https://api.runpod.ai/v2/${endpointId}/openai/v1`,
+                apiKey: env(ge, ENV.RUNPOD),
+                model: rpModel,
+            };
+        }
+
+        case PROVIDER.LOCALAI:
+            return {
+                baseURL: env(ge, 'LOCALAI_BASE_URL') ?? LOCALAI_BASE_URL,
+                apiKey: env(ge, 'LOCALAI_API_KEY') ?? 'not-needed',
+                model: modelId,
+            };
+
+        case PROVIDER.KOBOLD:
+            return {
+                baseURL: env(ge, 'KOBOLD_BASE_URL') ?? KOBOLD_BASE_URL,
+                apiKey: 'not-needed',
+                model: modelId,
+            };
+
+        case PROVIDER.TEXTGENWEBUI:
+            return {
+                baseURL: env(ge, 'TEXTGENWEBUI_BASE_URL') ?? TEXTGENWEBUI_BASE_URL,
+                apiKey: env(ge, 'TEXTGENWEBUI_API_KEY') ?? 'not-needed',
+                model: modelId,
+            };
+
+        case PROVIDER.JAN:
+            return {
+                baseURL: env(ge, 'JAN_BASE_URL') ?? JAN_BASE_URL,
+                apiKey: 'not-needed',
+                model: modelId,
+            };
 
         case PROVIDER.AZURE: {
             // format: azure:resource/deployment

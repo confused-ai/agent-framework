@@ -32,7 +32,7 @@ export class MockSessionStore {
     private deletedSessionIds: string[] = [];
 
     async create(session: Omit<Session, 'id' | 'createdAt' | 'updatedAt'>): Promise<Session> {
-        const id = `session-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+        const id = `session-${crypto.randomUUID()}`;
         const created: Session = {
             ...session,
             id,
@@ -118,7 +118,7 @@ export class MockSessionStore {
     }
 
     async recordRun(run: Omit<SessionRun, 'id'>): Promise<SessionRun> {
-        const id = `run-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+        const id = `run-${crypto.randomUUID()}`;
         const recorded: SessionRun = { ...run, id };
         const existing = this.runs.get(run.sessionId) ?? [];
         existing.push(recorded);

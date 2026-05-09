@@ -52,6 +52,29 @@ const mockAgent = (): CreateAgentResult => ({
     },
 });
 
+function echoAgent(onRun?: (prompt: string) => void): CreateAgentResult {
+    return {
+        name: 'echo',
+        instructions: 'echo',
+        async run(prompt) {
+            onRun?.(prompt);
+            return {
+                text: prompt,
+                markdown: { name: 'response.md', content: prompt, mimeType: 'text/markdown' as const, type: 'markdown' as const },
+                steps: 1,
+                finishReason: 'stop',
+                messages: [],
+            };
+        },
+        async createSession() {
+            return 'session-echo';
+        },
+        async getSessionMessages(_sessionId: string): Promise<Message[]> {
+            return [];
+        },
+    };
+}
+
 describe('createHttpService', () => {
     let svc: Awaited<ReturnType<typeof listenService>> | undefined;
 
@@ -100,5 +123,87 @@ describe('createHttpService', () => {
             | undefined;
         expect(done?.text).toBe('hello');
         expect(done?.finishReason).toBe('stop');
+    });
+
+    it('replays only the same idempotent request scope', async () => {
+        const seen: string[] = [];
+        const s = createHttpService({ agents: { a: echoAgent((prompt) => { seen.push(prompt); }) }, tracing: false, idempotency: {} });
+        svc = await listenService(s, 0);
+        const port = svc.port;
+
+        const first = await request(port, {
+            method: 'POST',
+            path: '/v1/chat',
+            headers: { 'Content-Type': 'application/json', 'X-Idempotency-Key': 'same-key' },
+            body: JSON.stringify({ message: 'first', agent: 'a' }),
+        });
+        const replay = await request(port, {
+            method: 'POST',
+            path: '/v1/chat',
+            headers: { 'Content-Type': 'application/json', 'X-Idempotency-Key': 'same-key' },
+            body: JSON.stringify({ message: 'first', agent: 'a' }),
+        });
+        const different = await request(port, {
+            method: 'POST',
+            path: '/v1/chat',
+            headers: { 'Content-Type': 'application/json', 'X-Idempotency-Key': 'same-key' },
+            body: JSON.stringify({ message: 'second', agent: 'a' }),
+        });
+
+        expect(first.status).toBe(200);
+        expect(replay.headers['x-idempotency-replay']).toBe('true');
+        expect(JSON.parse(replay.body) as { text: string }).toEqual(JSON.parse(first.body) as { text: string });
+        expect(JSON.parse(different.body) as { text: string }).toMatchObject({ text: 'second' });
+        expect(seen).toEqual(['first', 'second']);
+    });
+
+    it('ignores spoofed x-forwarded-for by default for rate limiting and audit', async () => {
+        const seenKeys: string[] = [];
+        const auditEntries: Array<{ ip?: string }> = [];
+        const s = createHttpService({
+            agents: { a: echoAgent() },
+            tracing: true,
+            rateLimit: { check(key) { seenKeys.push(key); } },
+            auditStore: { async append(entry) { auditEntries.push({ ip: entry.ip }); } },
+        });
+        svc = await listenService(s, 0);
+        const port = svc.port;
+
+        const res = await request(port, {
+            method: 'POST',
+            path: '/v1/chat',
+            headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '203.0.113.10' },
+            body: JSON.stringify({ message: 'hi', agent: 'a' }),
+        });
+
+        expect(res.status).toBe(200);
+        expect(seenKeys[0]).not.toBe('203.0.113.10');
+        expect(seenKeys[0]).toMatch(/127\.0\.0\.1|::1|::ffff:127\.0\.0\.1/);
+        expect(auditEntries[0]?.ip).toMatch(/127\.0\.0\.1|::1|::ffff:127\.0\.0\.1/);
+    });
+
+    it('uses x-forwarded-for only when trustProxy is enabled', async () => {
+        const seenKeys: string[] = [];
+        const auditEntries: Array<{ ip?: string }> = [];
+        const s = createHttpService({
+            agents: { a: echoAgent() },
+            tracing: true,
+            trustProxy: true,
+            rateLimit: { check(key) { seenKeys.push(key); } },
+            auditStore: { async append(entry) { auditEntries.push({ ip: entry.ip }); } },
+        });
+        svc = await listenService(s, 0);
+        const port = svc.port;
+
+        const res = await request(port, {
+            method: 'POST',
+            path: '/v1/chat',
+            headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '203.0.113.10, 127.0.0.1' },
+            body: JSON.stringify({ message: 'hi', agent: 'a' }),
+        });
+
+        expect(res.status).toBe(200);
+        expect(seenKeys[0]).toBe('203.0.113.10');
+        expect(auditEntries[0]?.ip).toBe('203.0.113.10');
     });
 });

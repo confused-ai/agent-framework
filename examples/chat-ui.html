@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>confused-ai — Chat UI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f8f8fc;
+      --surface: #ffffff;
+      --border: #e4e4f0;
+      --accent: #7c3aed;
+      --accent-light: #f3f0ff;
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --user-bg: #7c3aed;
+      --user-text: #ffffff;
+      --agent-bg: #f3f0ff;
+      --agent-text: #1a1a2e;
+      --radius: 16px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 760px;
+      padding: 16px 20px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    header .logo {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #7c3aed, #0891b2);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 800; font-size: 14px;
+    }
+
+    header h1 { font-size: 1rem; font-weight: 700; }
+    header .badge {
+      margin-left: auto;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 99px;
+      background: var(--accent-light);
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Config bar */
+    .config-bar {
+      width: 100%;
+      max-width: 760px;
+      padding: 8px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .config-bar label { font-size: 0.78rem; color: var(--muted); }
+
+    .config-bar input {
+      font-size: 0.82rem;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      outline: none;
+      background: var(--bg);
+      color: var(--text);
+      width: 200px;
+    }
+
+    .config-bar input:focus { border-color: var(--accent); }
+
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #d1d5db;
+      transition: background 0.3s;
+      margin-left: auto;
+    }
+    .status-dot.connected { background: #10b981; }
+
+    /* ── Messages ── */
+    #messages {
+      flex: 1;
+      width: 100%;
+      max-width: 760px;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      scroll-behavior: smooth;
+    }
+
+    .msg {
+      display: flex;
+      flex-direction: column;
+      max-width: 82%;
+      gap: 3px;
+    }
+
+    .msg.user { align-self: flex-end; align-items: flex-end; }
+    .msg.agent { align-self: flex-start; align-items: flex-start; }
+
+    .bubble {
+      padding: 11px 15px;
+      border-radius: var(--radius);
+      font-size: 0.92rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .msg.user .bubble {
+      background: var(--user-bg);
+      color: var(--user-text);
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg.agent .bubble {
+      background: var(--agent-bg);
+      color: var(--agent-text);
+      border-bottom-left-radius: 4px;
+    }
+
+    .meta {
+      font-size: 0.7rem;
+      color: var(--muted);
+      padding: 0 4px;
+    }
+
+    /* Typing indicator */
+    .typing .bubble {
+      background: var(--agent-bg);
+      border-bottom-left-radius: 4px;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      padding: 13px 18px;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); opacity: 0.4; animation: blink 1.2s infinite; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,80%,100% { opacity: 0.2; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+
+    /* Tool call tag */
+    .tool-tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      background: #ede9fe;
+      color: #6d28d9;
+      border-radius: 6px;
+      padding: 2px 8px;
+      margin-top: 4px;
+      font-family: monospace;
+    }
+
+    /* ── Input area ── */
+    .input-area {
+      width: 100%;
+      max-width: 760px;
+      padding: 14px 20px 20px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    #input {
+      flex: 1;
+      resize: none;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-family: var(--font);
+      font-size: 0.92rem;
+      line-height: 1.5;
+      outline: none;
+      background: var(--bg);
+      color: var(--text);
+      max-height: 140px;
+      min-height: 42px;
+      overflow-y: auto;
+      transition: border-color 0.15s;
+    }
+
+    #input:focus { border-color: var(--accent); }
+
+    #send {
+      height: 42px;
+      width: 42px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #7c3aed, #0891b2);
+      color: white;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+
+    #send:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    #send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .hint { font-size: 0.7rem; color: var(--muted); padding: 0 4px; text-align: center; }
+
+    /* Empty state */
+    .empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--muted);
+    }
+
+    .empty .icon {
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, #7c3aed22, #0891b222);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+    }
+
+    .empty p { font-size: 0.9rem; }
+    .empty .suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 6px; }
+    .suggestion {
+      font-size: 0.8rem;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      cursor: pointer;
+      background: var(--surface);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .suggestion:hover { border-color: var(--accent); background: var(--accent-light); }
+
+    code { font-family: monospace; font-size: 0.85em; background: #f0eeff; padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">AI</div>
+  <h1>confused-ai</h1>
+  <span class="badge" id="agent-label">assistant</span>
+</header>
+
+<div class="config-bar">
+  <label for="url-input">Server</label>
+  <input id="url-input" type="text" value="http://localhost:8787" placeholder="http://localhost:8787" />
+  <label for="agent-input">Agent</label>
+  <input id="agent-input" type="text" value="" placeholder="default" style="width:120px" />
+  <label for="session-input">Session</label>
+  <input id="session-input" type="text" value="" placeholder="auto" style="width:140px" />
+  <div class="status-dot" id="status-dot" title="Not connected"></div>
+</div>
+
+<div id="messages">
+  <div class="empty" id="empty-state">
+    <div class="icon">🤖</div>
+    <p>Start a conversation with your agent</p>
+    <div class="suggestions">
+      <span class="suggestion" onclick="sendSuggestion(this)">What is 40 + 2?</span>
+      <span class="suggestion" onclick="sendSuggestion(this)">List your capabilities</span>
+      <span class="suggestion" onclick="sendSuggestion(this)">Tell me a fun fact</span>
+      <span class="suggestion" onclick="sendSuggestion(this)">Summarize what confused-ai does</span>
+    </div>
+  </div>
+</div>
+
+<div class="input-area">
+  <textarea id="input" rows="1" placeholder="Message your agent… (Enter to send, Shift+Enter for newline)"></textarea>
+  <button id="send" title="Send">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13"></line>
+      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+    </svg>
+  </button>
+</div>
+<p class="hint" style="padding-bottom:8px">Connects to <code>POST /v1/chat</code> on your local agent server</p>
+
+<script>
+  const messagesEl = document.getElementById('messages');
+  const inputEl = document.getElementById('input');
+  const sendBtn = document.getElementById('send');
+  const emptyState = document.getElementById('empty-state');
+  const statusDot = document.getElementById('status-dot');
+  const agentLabel = document.getElementById('agent-label');
+
+  let sessionId = null;
+  let isStreaming = false;
+
+  // ── Auto-resize textarea ──
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+  });
+
+  // ── Enter to send ──
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      doSend();
+    }
+  });
+
+  sendBtn.addEventListener('click', doSend);
+
+  function sendSuggestion(el) {
+    inputEl.value = el.textContent.trim();
+    doSend();
+  }
+
+  function getConfig() {
+    const url = document.getElementById('url-input').value.trim().replace(/\/$/, '');
+    const agent = document.getElementById('agent-input').value.trim() || undefined;
+    const sid = document.getElementById('session-input').value.trim() || undefined;
+    return { url, agent, sid };
+  }
+
+  function addMessage(role, text, meta) {
+    if (emptyState) emptyState.style.display = 'none';
+
+    const msg = document.createElement('div');
+    msg.className = `msg ${role}`;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+
+    msg.appendChild(bubble);
+
+    if (meta) {
+      const m = document.createElement('div');
+      m.className = 'meta';
+      m.textContent = meta;
+      msg.appendChild(m);
+    }
+
+    messagesEl.appendChild(msg);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return bubble;
+  }
+
+  function addTyping() {
+    const msg = document.createElement('div');
+    msg.className = 'msg agent typing';
+    msg.id = 'typing';
+    msg.innerHTML = '<div class="bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+    messagesEl.appendChild(msg);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return msg;
+  }
+
+  function removeTyping() {
+    document.getElementById('typing')?.remove();
+  }
+
+  function setStatus(connected) {
+    statusDot.className = 'status-dot' + (connected ? ' connected' : '');
+    statusDot.title = connected ? 'Connected' : 'Not connected';
+  }
+
+  async function doSend() {
+    const text = inputEl.value.trim();
+    if (!text || isStreaming) return;
+
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    isStreaming = true;
+    sendBtn.disabled = true;
+
+    addMessage('user', text, new Date().toLocaleTimeString());
+
+    const { url, agent, sid } = getConfig();
+    if (sid) sessionId = sid;
+
+    const typingEl = addTyping();
+
+    const body = { message: text, stream: true };
+    if (agent) body.agent = agent;
+    if (sessionId) body.sessionId = sessionId;
+
+    agentLabel.textContent = agent || 'assistant';
+
+    try {
+      const res = await fetch(`${url}/v1/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      setStatus(res.ok);
+
+      if (!res.ok) {
+        removeTyping();
+        const errText = await res.text().catch(() => res.statusText);
+        addMessage('agent', `Error ${res.status}: ${errText}`, 'error');
+        return;
+      }
+
+      // Parse SSE stream
+      const contentType = res.headers.get('content-type') || '';
+      const isSSE = contentType.includes('text/event-stream');
+
+      if (isSSE) {
+        removeTyping();
+        let bubble = null;
+        let agentMsgEl = null;
+        let accumulated = '';
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop() ?? '';
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') continue;
+            try {
+              const ev = JSON.parse(data);
+
+              // session ID from first event
+              if (ev.sessionId && !sessionId) {
+                sessionId = ev.sessionId;
+                document.getElementById('session-input').value = sessionId;
+              }
+
+              if (ev.type === 'chunk' && ev.text) {
+                accumulated += ev.text;
+                if (!bubble) {
+                  const ts = new Date().toLocaleTimeString();
+                  if (!agentMsgEl) {
+                    agentMsgEl = document.createElement('div');
+                    agentMsgEl.className = 'msg agent';
+                    bubble = document.createElement('div');
+                    bubble.className = 'bubble';
+                    agentMsgEl.appendChild(bubble);
+                    const meta = document.createElement('div');
+                    meta.className = 'meta';
+                    meta.id = 'stream-meta';
+                    meta.textContent = ts;
+                    agentMsgEl.appendChild(meta);
+                    messagesEl.appendChild(agentMsgEl);
+                  }
+                }
+                bubble.textContent = accumulated;
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+              }
+
+              if (ev.type === 'tool_call' && agentMsgEl) {
+                const tag = document.createElement('span');
+                tag.className = 'tool-tag';
+                tag.textContent = `⚡ ${ev.tool}(${JSON.stringify(ev.input ?? {})})`;
+                agentMsgEl.insertBefore(tag, document.getElementById('stream-meta'));
+              }
+
+              if (ev.type === 'done' && ev.finishReason && agentMsgEl) {
+                const meta = document.getElementById('stream-meta');
+                if (meta) meta.textContent += `  ·  ${ev.steps ?? 0} steps · ${ev.finishReason}`;
+                if (ev.sessionId) {
+                  sessionId = ev.sessionId;
+                  document.getElementById('session-input').value = sessionId;
+                }
+              }
+
+            } catch { /* ignore non-JSON lines */ }
+          }
+        }
+        if (!bubble) {
+          addMessage('agent', '(no response)', new Date().toLocaleTimeString());
+        }
+
+      } else {
+        // JSON response fallback
+        removeTyping();
+        const json = await res.json();
+        const reply = json.text || json.message || JSON.stringify(json);
+        if (json.sessionId && !sessionId) {
+          sessionId = json.sessionId;
+          document.getElementById('session-input').value = sessionId;
+        }
+        addMessage('agent', reply, new Date().toLocaleTimeString());
+      }
+
+    } catch (err) {
+      removeTyping();
+      setStatus(false);
+      addMessage('agent', `Could not connect: ${err.message}\n\nMake sure the agent server is running:\n  bun examples/framework-showcase.ts --http`, 'error');
+    } finally {
+      isStreaming = false;
+      sendBtn.disabled = false;
+      inputEl.focus();
+    }
+  }
+</script>
+
+</body>
+</html>

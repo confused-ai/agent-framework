@@ -33,14 +33,14 @@ config({
     quiet: true,
 });
 
-import { bare, compose, pipe } from '../src/dx/index.js';
-import { MockLLMProvider } from '../src/testing/mock-llm.js';
+import { bare, compose, pipe } from 'confused-ai';
+import { MockLLMProvider } from '@confused-ai/test-utils';
 
 // ── Mock LLMs (deterministic canned responses) ────────────────────────────
 
 /**
  * In production, replace with:
- *   import { OpenAIProvider } from '../src/providers/openai.js';
+ *   import { OpenAIProvider } from 'confused-ai';
  *   const llm = new OpenAIProvider({ apiKey: process.env.OPENAI_API_KEY!, model: 'gpt-4o' });
  */
 const diffLlm = new MockLLMProvider({

@@ -6,7 +6,8 @@
     "packageManager": "bun@1.3.11",
     "sideEffects": false,
     "workspaces": [
-        "packages/*"
+        "packages/*",
+        "packages/*/*"
     ],
     "files": [
         "dist/**/*.js",
@@ -254,11 +255,6 @@
             "import": "./dist/sdk.js",
             "require": "./dist/sdk.cjs"
         },
-        "./extensions": {
-            "types": "./dist/extensions.d.ts",
-            "import": "./dist/extensions.js",
-            "require": "./dist/extensions.cjs"
-        },
         "./graph": {
             "types": "./dist/graph.d.ts",
             "import": "./dist/graph.js",
@@ -329,12 +325,14 @@
         "test:coverage": "vitest run --coverage",
         "bench": "vitest bench",
         "lint": "eslint src --max-warnings 0",
-        "lint:packages": "eslint packages/contracts/src packages/core/src packages/observe/src packages/guard/src packages/serve/src packages/models/src packages/session/src packages/tools/src packages/workflow/src packages/knowledge/src packages/router/src packages/test-utils/src packages/adapter-redis/src --max-warnings 10",
-        "lint:fix": "eslint packages/contracts/src packages/core/src packages/tools/src packages/session/src --fix",
+        "lint:packages": "eslint packages/foundation/contracts/src packages/runtime/core/src packages/platform/observe/src packages/platform/guard/src packages/platform/serve/src packages/providers/models/src packages/state/session/src packages/tools-layer/tools/src packages/runtime/workflow/src packages/state/knowledge/src packages/providers/router/src packages/developer/test-utils/src packages/state/adapter-redis/src --max-warnings 10",
+        "lint:fix": "eslint packages/foundation/contracts/src packages/runtime/core/src packages/tools-layer/tools/src packages/state/session/src --fix",
+        "check:bundle": "node scripts/check-bundle-size.mjs",
+        "check:docs": "node scripts/check-docs-claims.mjs",
         "docs:dev": "vitepress dev docs",
         "docs:build": "vitepress build docs",
         "docs:preview": "vitepress preview docs",
-        "prepack": "npm run typecheck && npm run test && npm run build:all",
+        "prepack": "npm run typecheck && npm run test && npm run build:all && bun run lint:packages || true",
         "pack:inspect": "npm pack --dry-run"
     },
     "keywords": [

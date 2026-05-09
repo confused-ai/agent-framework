@@ -841,3 +841,389 @@ export function createLmStudioProvider(config: LmStudioProviderConfig = {}): LLM
     });
 }
 
+// ── Wave 4: Chinese frontier providers ────────────────────────────────────
+
+export const HUNYUAN_BASE_URL = 'https://api.hunyuan.cloud.tencent.com/v1';
+
+export interface HunyuanProviderConfig {
+    /** Tencent Hunyuan API key (or HUNYUAN_API_KEY env var) */
+    apiKey?: string;
+    /**
+     * Model id. Default: hunyuan-pro
+     * Options: hunyuan-standard, hunyuan-lite, hunyuan-turbo, hunyuan-vision-pro
+     */
+    model?: string;
+    debug?: boolean;
+}
+
+/** Tencent Hunyuan — frontier Chinese LLM from Tencent. */
+export function createHunyuanProvider(config: HunyuanProviderConfig = {}): LLMProvider {
+    const apiKey = config.apiKey ?? (typeof process !== 'undefined' ? process.env.HUNYUAN_API_KEY : undefined);
+    if (!apiKey) throw new Error('HunyuanProvider requires apiKey or HUNYUAN_API_KEY env var');
+    return new OpenAIProvider({
+        apiKey,
+        baseURL: HUNYUAN_BASE_URL,
+        model: config.model ?? 'hunyuan-pro',
+        debug: config.debug,
+    });
+}
+
+// ── Volcengine ARK (ByteDance DouBao) ──────────────────────────────────────
+
+export const VOLCENGINE_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
+
+export interface VolcengineProviderConfig {
+    /** Volcengine ARK API key (or VOLCENGINE_API_KEY / ARK_API_KEY env var) */
+    apiKey?: string;
+    /**
+     * Endpoint ID for your deployed model (required — format: ep-xxxxxxxx-xxxxx).
+     * Create an endpoint at https://console.volcengine.com/ark
+     */
+    model: string;
+    debug?: boolean;
+}
+
+/** Volcengine ARK — ByteDance's DouBao/Skylark models. Requires a model endpoint ID. */
+export function createVolcengineProvider(config: VolcengineProviderConfig): LLMProvider {
+    const apiKey = config.apiKey ?? (typeof process !== 'undefined'
+        ? (process.env.VOLCENGINE_API_KEY ?? process.env.ARK_API_KEY)
+        : undefined);
+    if (!apiKey) throw new Error('VolcengineProvider requires apiKey or VOLCENGINE_API_KEY / ARK_API_KEY env var');
+    if (!config.model) throw new Error('VolcengineProvider requires model (endpoint ID, e.g. ep-xxxxxxxx-xxxxx)');
+    return new OpenAIProvider({
+        apiKey,
+        baseURL: VOLCENGINE_BASE_URL,
+        model: config.model,
+        debug: config.debug,
+    });
+}
+
+// ── Minimax ────────────────────────────────────────────────────────────────
+
+export const MINIMAX_BASE_URL = 'https://api.minimax.chat/v1';
+
+export interface MinimaxProviderConfig {
+    /** Minimax API key (or MINIMAX_API_KEY env var) */
+    apiKey?: string;
+    /**
+     * Model id. Default: MiniMax-Text-01
+     * Options: abab6.5s-chat, abab6.5t-chat, abab5.5-chat
+     */
+    model?: string;
+    debug?: boolean;
+}
+
+/** Minimax AI — flagship MiniMax-Text and abab model series. */
+export function createMinimaxProvider(config: MinimaxProviderConfig = {}): LLMProvider {
+    const apiKey = config.apiKey ?? (typeof process !== 'undefined' ? process.env.MINIMAX_API_KEY : undefined);
+    if (!apiKey) throw new Error('MinimaxProvider requires apiKey or MINIMAX_API_KEY env var');
+    return new OpenAIProvider({
+        apiKey,
+        baseURL: MINIMAX_BASE_URL,
+        model: config.model ?? 'MiniMax-Text-01',
+        debug: config.debug,
+    });
+}
+
+// ── Baichuan AI ────────────────────────────────────────────────────────────
+
+export const BAICHUAN_BASE_URL = 'https://api.baichuan-ai.com/v1';
+
+export interface BaichuanProviderConfig {
+    /** Baichuan API key (or BAICHUAN_API_KEY env var) */
+    apiKey?: string;
+    /**
+     * Model id. Default: Baichuan4-Turbo
+     * Options: Baichuan4-Air, Baichuan3-Turbo, Baichuan3-Turbo-128k
+     */
+    model?: string;
+    debug?: boolean;
+}
+
+/** Baichuan AI — Baichuan series bilingual (zh/en) models. */
+export function createBaichuanProvider(config: BaichuanProviderConfig = {}): LLMProvider {
+    const apiKey = config.apiKey ?? (typeof process !== 'undefined' ? process.env.BAICHUAN_API_KEY : undefined);
+    if (!apiKey) throw new Error('BaichuanProvider requires apiKey or BAICHUAN_API_KEY env var');
+    return new OpenAIProvider({
+        apiKey,
+        baseURL: BAICHUAN_BASE_URL,
+        model: config.model ?? 'Baichuan4-Turbo',
+        debug: config.debug,
+    });
+}
+
+// ── Stepfun ────────────────────────────────────────────────────────────────
+
+export const STEPFUN_BASE_URL = 'https://api.stepfun.com/v1';
+
+export interface StepfunProviderConfig {
+    /** Stepfun API key (or STEPFUN_API_KEY env var) */
+    apiKey?: string;
+    /**
+     * Model id. Default: step-2-16k
+     * Options: step-1-8k, step-1-32k, step-1-128k, step-1-256k, step-1v-8k (vision)
+     */
+    model?: string;
+    debug?: boolean;
+}
+
+/** Stepfun — Step-1/Step-2 large language models (Shanghai). */
+export function createStepfunProvider(config: StepfunProviderConfig = {}): LLMProvider {
+    const apiKey = config.apiKey ?? (typeof process !== 'undefined' ? process.env.STEPFUN_API_KEY : undefined);
+    if (!apiKey) throw new Error('StepfunProvider requires apiKey or STEPFUN_API_KEY env var');
+    return new OpenAIProvider({
+        apiKey,
+        baseURL: STEPFUN_BASE_URL,
+        model: config.model ?? 'step-2-16k',
+        debug: config.debug,
+    });
+}
+
+// ── InternLM (Shanghai AI Lab) ─────────────────────────────────────────────
+
+export const INTERNLM_BASE_URL = 'https://internlm-chat.intern-ai.org.cn/puyu/api/v1';
+
+export interface InternLMProviderConfig {
+    /** InternLM API key (or INTERNLM_API_KEY env var) */
+    apiKey?: string;
+    /**
+     * Model id. Default: internlm2.5-latest
+     * Options: internlm2.5-7b-chat, internlm2.5-20b-chat
+     */
+    model?: string;
+    debug?: boolean;
+}
+
+/** InternLM — open-source InternLM2.5 series by Shanghai AI Lab. */
+export function createInternLMProvider(config: InternLMProviderConfig = {}): LLMProvider {
+    const apiKey = config.apiKey ?? (typeof process !== 'undefined' ? process.env.INTERNLM_API_KEY : undefined);
+    if (!apiKey) throw new Error('InternLMProvider requires apiKey or INTERNLM_API_KEY env var');
+    return new OpenAIProvider({
+        apiKey,
+        baseURL: INTERNLM_BASE_URL,
+        model: config.model ?? 'internlm2.5-latest',
+        debug: config.debug,
+    });
+}
+
+// ── Wave 4: Global cloud providers ────────────────────────────────────────
+
+export const REPLICATE_BASE_URL = 'https://openai-compat.replicate.com/v1';
+
+export interface ReplicateProviderConfig {
+    /** Replicate API token (or REPLICATE_API_TOKEN / REPLICATE_API_KEY env var) */
+    apiKey?: string;
+    /**
+     * Model identifier. Default: meta/meta-llama-3-70b-instruct
+     * Format: owner/model-name (e.g. mistralai/mixtral-8x7b-instruct-v0-1)
+     */
+    model?: string;
+    debug?: boolean;
+}
+
+/** Replicate — run open-source models via serverless GPU. */
+export function createReplicateProvider(config: ReplicateProviderConfig = {}): LLMProvider {
+    const apiKey = config.apiKey ?? (typeof process !== 'undefined'
+        ? (process.env.REPLICATE_API_TOKEN ?? process.env.REPLICATE_API_KEY)
+        : undefined);
+    if (!apiKey) throw new Error('ReplicateProvider requires apiKey or REPLICATE_API_TOKEN env var');
+    return new OpenAIProvider({
+        apiKey,
+        baseURL: REPLICATE_BASE_URL,
+        model: config.model ?? 'meta/meta-llama-3-70b-instruct',
+        debug: config.debug,
+    });
+}
+
+// ── RunPod ─────────────────────────────────────────────────────────────────
+
+export interface RunPodProviderConfig {
+    /** RunPod API key (or RUNPOD_API_KEY env var) */
+    apiKey?: string;
+    /**
+     * Your RunPod serverless endpoint ID (required).
+     * Find it in https://www.runpod.io/console/serverless
+     */
+    endpointId: string;
+    /**
+     * Model id served by the endpoint. Default: default
+     * Some RunPod endpoints serve a fixed model and ignore this field.
+     */
+    model?: string;
+    debug?: boolean;
+}
+
+/** RunPod — serverless GPU inference on your own RunPod endpoint. */
+export function createRunPodProvider(config: RunPodProviderConfig): LLMProvider {
+    const apiKey = config.apiKey ?? (typeof process !== 'undefined' ? process.env.RUNPOD_API_KEY : undefined);
+    if (!apiKey) throw new Error('RunPodProvider requires apiKey or RUNPOD_API_KEY env var');
+    if (!config.endpointId) throw new Error('RunPodProvider requires endpointId');
+    const baseURL = `https://api.runpod.ai/v2/${config.endpointId}/openai/v1`;
+    return new OpenAIProvider({
+        apiKey,
+        baseURL,
+        model: config.model ?? 'default',
+        debug: config.debug,
+    });
+}
+
+// ── IBM watsonx.ai ─────────────────────────────────────────────────────────
+
+export const WATSONX_REGION_URLS: Record<string, string> = {
+    'us-south': 'https://us-south.ml.cloud.ibm.com/ml/v1',
+    'eu-de':    'https://eu-de.ml.cloud.ibm.com/ml/v1',
+    'eu-gb':    'https://eu-gb.ml.cloud.ibm.com/ml/v1',
+    'jp-tok':   'https://jp-tok.ml.cloud.ibm.com/ml/v1',
+    'au-syd':   'https://au-syd.ml.cloud.ibm.com/ml/v1',
+};
+
+export interface WatsonxProviderConfig {
+    /**
+     * Pre-obtained IBM IAM Bearer token (or WATSONX_API_KEY / IBMCLOUD_API_KEY env var).
+     * Generate with: ibmcloud iam oauth-tokens
+     */
+    apiKey?: string;
+    /** watsonx.ai region. Default: us-south */
+    region?: string;
+    /**
+     * Model id. Default: meta-llama/llama-3-70b-instruct
+     * Options: ibm/granite-13b-chat-v2, mistralai/mixtral-8x7b-instruct-v01,
+     *          google/flan-ul2
+     */
+    model?: string;
+    debug?: boolean;
+}
+
+/**
+ * IBM watsonx.ai — enterprise AI with Granite and open models.
+ * Note: Requires a pre-obtained IBM IAM Bearer token as apiKey.
+ */
+export function createWatsonxProvider(config: WatsonxProviderConfig = {}): LLMProvider {
+    const apiKey = config.apiKey ?? (typeof process !== 'undefined'
+        ? (process.env.WATSONX_API_KEY ?? process.env.IBMCLOUD_API_KEY)
+        : undefined);
+    if (!apiKey) throw new Error('WatsonxProvider requires apiKey (IBM IAM token) or WATSONX_API_KEY env var');
+    const region = config.region ?? (typeof process !== 'undefined' ? process.env.WATSONX_REGION : undefined) ?? 'us-south';
+    const regionBase = WATSONX_REGION_URLS[region] ?? `https://${region}.ml.cloud.ibm.com/ml/v1`;
+    // watsonx exposes OpenAI-compatible /text/chat — versioned via query param
+    const baseURL = `${regionBase}/text/chat?version=2023-05-29`;
+    return new OpenAIProvider({
+        apiKey,
+        baseURL,
+        model: config.model ?? 'meta-llama/llama-3-70b-instruct',
+        debug: config.debug,
+    });
+}
+
+// ── Wave 4: Additional self-hosted / local providers ───────────────────────
+
+export interface LocalAIProviderConfig {
+    /** LocalAI server URL. Default: http://localhost:8080/v1 */
+    baseURL?: string;
+    /** API key if your LocalAI server is auth-protected. */
+    apiKey?: string;
+    /**
+     * Model name as configured in LocalAI (e.g. ggml-gpt4all-j, llama-3).
+     * Default: ggml-gpt4all-j
+     */
+    model?: string;
+    debug?: boolean;
+}
+
+/**
+ * LocalAI — drop-in OpenAI replacement running locally.
+ * https://localai.io — supports GGUF, GPTQ, AWQ, and more.
+ */
+export function createLocalAIProvider(config: LocalAIProviderConfig = {}): LLMProvider {
+    const baseURL = config.baseURL ??
+        (typeof process !== 'undefined' ? process.env.LOCALAI_BASE_URL : undefined) ??
+        'http://localhost:8080/v1';
+    return new OpenAIProvider({
+        apiKey: config.apiKey ?? (typeof process !== 'undefined' ? process.env.LOCALAI_API_KEY : undefined) ?? 'not-needed',
+        baseURL,
+        model: config.model ?? 'ggml-gpt4all-j',
+        debug: config.debug,
+    });
+}
+
+export interface KoboldProviderConfig {
+    /** KoboldCpp server URL. Default: http://localhost:5001/v1 */
+    baseURL?: string;
+    /**
+     * Model name. Default: local-model
+     * KoboldCpp serves whatever GGUF is loaded; this is passed for completeness.
+     */
+    model?: string;
+    debug?: boolean;
+}
+
+/**
+ * KoboldCpp — GGUF CPU/GPU inference with an OpenAI-compatible API.
+ * https://github.com/LostRuins/koboldcpp
+ */
+export function createKoboldProvider(config: KoboldProviderConfig = {}): LLMProvider {
+    const baseURL = config.baseURL ??
+        (typeof process !== 'undefined' ? process.env.KOBOLD_BASE_URL : undefined) ??
+        'http://localhost:5001/v1';
+    return new OpenAIProvider({
+        apiKey: 'not-needed',
+        baseURL,
+        model: config.model ?? 'local-model',
+        debug: config.debug,
+    });
+}
+
+export interface TextGenWebUIProviderConfig {
+    /** Text Generation WebUI server URL. Default: http://localhost:7860/v1 */
+    baseURL?: string;
+    /** API key if --api-key is set in the WebUI launch options. */
+    apiKey?: string;
+    /** Model name. Default: local-model */
+    model?: string;
+    debug?: boolean;
+}
+
+/**
+ * Text Generation WebUI (oobabooga) — OpenAI-compatible local inference.
+ * Start with --api flag: python server.py --api
+ * https://github.com/oobabooga/text-generation-webui
+ */
+export function createTextGenWebUIProvider(config: TextGenWebUIProviderConfig = {}): LLMProvider {
+    const baseURL = config.baseURL ??
+        (typeof process !== 'undefined' ? process.env.TEXTGENWEBUI_BASE_URL : undefined) ??
+        'http://localhost:7860/v1';
+    return new OpenAIProvider({
+        apiKey: config.apiKey ?? (typeof process !== 'undefined' ? process.env.TEXTGENWEBUI_API_KEY : undefined) ?? 'not-needed',
+        baseURL,
+        model: config.model ?? 'local-model',
+        debug: config.debug,
+    });
+}
+
+export interface JanProviderConfig {
+    /** Jan local server URL. Default: http://localhost:1337/v1 */
+    baseURL?: string;
+    /**
+     * Model id as listed in Jan (e.g. llama3.2-3b-instruct, mistral-7b-instruct).
+     * Default: llama3.2-3b-instruct
+     */
+    model?: string;
+    debug?: boolean;
+}
+
+/**
+ * Jan — open-source, offline-capable AI assistant with an OpenAI-compatible server.
+ * https://jan.ai
+ */
+export function createJanProvider(config: JanProviderConfig = {}): LLMProvider {
+    const baseURL = config.baseURL ??
+        (typeof process !== 'undefined' ? process.env.JAN_BASE_URL : undefined) ??
+        'http://localhost:1337/v1';
+    return new OpenAIProvider({
+        apiKey: 'not-needed',
+        baseURL,
+        model: config.model ?? 'llama3.2-3b-instruct',
+        debug: config.debug,
+    });
+}
+

@@ -96,10 +96,10 @@ export class InMemoryTracer implements Tracer {
     }
 
     private generateId(): EntityId {
-        return `span-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        return `span-${crypto.randomUUID()}`;
     }
 
     private generateTraceId(): string {
-        return `trace-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        return `trace-${crypto.randomUUID()}`;
     }
 }

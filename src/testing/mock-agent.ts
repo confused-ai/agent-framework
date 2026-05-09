@@ -138,6 +138,18 @@ export function createMockAgent(options: MockAgentOptions): MockAgentHandle {
             return Promise.resolve([]);
         },
 
+        resume(sessionId: string) {
+            return {
+                run: (prompt: string, opts?: Record<string, unknown>) => agent.run(prompt, { ...opts, sessionId }),
+                stream: async function* (prompt: string, opts?: Record<string, unknown>) {
+                    yield* agent.stream(prompt, { ...opts, sessionId });
+                },
+                streamEvents: async function* (prompt: string, opts?: Record<string, unknown>) {
+                    yield* agent.streamEvents(prompt, { ...opts, sessionId });
+                },
+            };
+        },
+
         get callHistory() {
             return callHistory as ReadonlyArray<MockAgentCall>;
         },

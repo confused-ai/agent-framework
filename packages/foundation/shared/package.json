@@ -17,14 +17,17 @@
     "src"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "sideEffects": false,
   "peerDependencies": {
-    "@confused-ai/core": "*"
+    "@confused-ai/core": "0.1.0"
   },
-  "module": "./dist/index.js"
+  "module": "./dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  }
 }

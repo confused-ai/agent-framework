@@ -12,6 +12,16 @@ npm install confused-ai
 bun add confused-ai
 ```
 
+`confused-ai` installs the full framework and depends on all 40 public `@confused-ai/*` packages. You can also import focused root subpaths or install scoped packages directly:
+
+```ts
+import { agent } from 'confused-ai';
+import { createAgent } from 'confused-ai/core';
+import { createAgent } from '@confused-ai/core';
+```
+
+See [Packages & Imports](/guide/packages) for the complete install and export model.
+
 You'll also need at least one LLM provider key in your environment:
 
 ```bash

@@ -16,6 +16,19 @@ npm install confused-ai          # everything
 npm install @confused-ai/core @confused-ai/models @confused-ai/tools
 ```
 
+## Import strategy
+
+Use the root package for the easiest install, root subpaths for focused tree-shakeable imports, and scoped packages when a library or service should depend on one module directly.
+
+```ts
+import { agent } from 'confused-ai';
+import { createAgent } from 'confused-ai/core';
+import { createAgent } from '@confused-ai/core';
+import { RedisSessionStore } from '@confused-ai/adapter-redis';
+```
+
+All public `@confused-ai/*` packages are published independently, while `confused-ai` depends on those packages and re-exports their main surfaces. See [Packages & Imports](/guide/packages) for the full npm model.
+
 ---
 
 ## Foundation

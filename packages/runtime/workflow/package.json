@@ -32,14 +32,14 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint src --max-warnings 0"
   },
   "dependencies": {
-    "@confused-ai/contracts": "*",
-    "@confused-ai/core": "*"
+    "@confused-ai/contracts": "0.1.0",
+    "@confused-ai/core": "0.1.0"
   },
   "devDependencies": {
     "tsup": "^8.4.0",
@@ -47,5 +47,8 @@
     "vitest": "^4.0.18"
   },
   "license": "MIT",
-  "module": "./dist/index.js"
+  "module": "./dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  }
 }

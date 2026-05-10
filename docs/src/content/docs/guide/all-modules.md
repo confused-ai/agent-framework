@@ -6,6 +6,21 @@ title: "All Modules"
 
 Complete reference for every module in confused-ai — what it does, every export, and how to use it.
 
+confused-ai publishes both the umbrella `confused-ai` package and focused scoped packages. Use the root install for the complete framework, root subpaths for tree-shakeable facades, and `@confused-ai/<package>` for direct package dependencies.
+
+```bash
+npm install confused-ai
+npm install @confused-ai/core @confused-ai/models @confused-ai/tools
+```
+
+```ts
+import { agent } from 'confused-ai';
+import { createAgent } from 'confused-ai/core';
+import { createAgent } from '@confused-ai/core';
+```
+
+See [Packages & Imports](/guide/packages) for the full npm model.
+
 ---
 
 ## `agent()` — Quick-start factory

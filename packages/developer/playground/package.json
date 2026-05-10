@@ -17,15 +17,15 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "typecheck": "tsc --noEmit",
     "dev": "node --loader ts-node/esm src/index.ts"
   },
   "dependencies": {
-    "@confused-ai/contracts": "*"
+    "@confused-ai/contracts": "0.1.0"
   },
   "peerDependencies": {
-    "@confused-ai/agentic": "*"
+    "@confused-ai/agentic": "0.1.0"
   },
   "peerDependenciesMeta": {
     "@confused-ai/agentic": {
@@ -36,5 +36,8 @@
     "typescript": "^5.4.5",
     "tsup": "^8.0.2"
   },
-  "module": "./dist/index.js"
+  "module": "./dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  }
 }

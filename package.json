@@ -1,552 +1,622 @@
 {
-    "name": "confused-ai",
-    "version": "2.1.0",
-    "description": "TypeScript AI agent framework — 40+ LLM providers, 100+ tools, multi-agent orchestration, RAG, guardrails, circuit breakers, HITL, budget enforcement. Open-source CrewAI / LangChain alternative.",
-    "type": "module",
-    "packageManager": "bun@1.3.11",
-    "sideEffects": false,
-    "workspaces": [
-        "packages/*",
-        "packages/*/*"
-    ],
-    "files": [
-        "dist/**/*.js",
-        "dist/**/*.cjs",
-        "dist/**/*.d.ts",
-        "dist/**/*.d.cts",
-        "!dist/**/*.map"
-    ],
-    "main": "./dist/index.cjs",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-        ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.js",
-            "require": "./dist/index.cjs"
-        },
-        "./core": {
-            "types": "./dist/core.d.ts",
-            "import": "./dist/core.js",
-            "require": "./dist/core.cjs"
-        },
-        "./memory": {
-            "types": "./dist/memory.d.ts",
-            "import": "./dist/memory.js",
-            "require": "./dist/memory.cjs"
-        },
-        "./providers": {
-            "types": "./dist/providers.d.ts",
-            "import": "./dist/providers.js",
-            "require": "./dist/providers.cjs"
-        },
-        "./llm": {
-            "types": "./dist/providers.d.ts",
-            "import": "./dist/providers.js",
-            "require": "./dist/providers.cjs"
-        },
-        "./tools": {
-            "types": "./dist/tools.d.ts",
-            "import": "./dist/tools.js",
-            "require": "./dist/tools.cjs"
-        },
-        "./planner": {
-            "types": "./dist/planner.d.ts",
-            "import": "./dist/planner.js",
-            "require": "./dist/planner.cjs"
-        },
-        "./execution": {
-            "types": "./dist/execution.d.ts",
-            "import": "./dist/execution.js",
-            "require": "./dist/execution.cjs"
-        },
-        "./orchestration": {
-            "types": "./dist/orchestration.d.ts",
-            "import": "./dist/orchestration.js",
-            "require": "./dist/orchestration.cjs"
-        },
-        "./observability": {
-            "types": "./dist/observability.d.ts",
-            "import": "./dist/observability.js",
-            "require": "./dist/observability.cjs"
-        },
-        "./agentic": {
-            "types": "./dist/agentic.d.ts",
-            "import": "./dist/agentic.js",
-            "require": "./dist/agentic.cjs"
-        },
-        "./session": {
-            "types": "./dist/session.d.ts",
-            "import": "./dist/session.js",
-            "require": "./dist/session.cjs"
-        },
-        "./guardrails": {
-            "types": "./dist/guardrails.d.ts",
-            "import": "./dist/guardrails.js",
-            "require": "./dist/guardrails.cjs"
-        },
-        "./production": {
-            "types": "./dist/production.d.ts",
-            "import": "./dist/production.js",
-            "require": "./dist/production.cjs"
-        },
-        "./artifacts": {
-            "types": "./dist/artifacts.d.ts",
-            "import": "./dist/artifacts.js",
-            "require": "./dist/artifacts.cjs"
-        },
-        "./voice": {
-            "types": "./dist/voice.d.ts",
-            "import": "./dist/voice.js",
-            "require": "./dist/voice.cjs"
-        },
-        "./shared": {
-            "types": "./dist/shared.d.ts",
-            "import": "./dist/shared.js",
-            "require": "./dist/shared.cjs"
-        },
-        "./tools/shell": {
-            "types": "./dist/tools/shell.d.ts",
-            "import": "./dist/tools/shell.js",
-            "require": "./dist/tools/shell.cjs"
-        },
-        "./tools/core": {
-            "types": "./dist/tools/core.d.ts",
-            "import": "./dist/tools/core.js",
-            "require": "./dist/tools/core.cjs"
-        },
-        "./tools/mcp": {
-            "types": "./dist/tools/mcp.d.ts",
-            "import": "./dist/tools/mcp.js",
-            "require": "./dist/tools/mcp.cjs"
-        },
-        "./tools/utils": {
-            "types": "./dist/tools/utils.d.ts",
-            "import": "./dist/tools/utils.js",
-            "require": "./dist/tools/utils.cjs"
-        },
-        "./tools/communication": {
-            "types": "./dist/tools/communication.d.ts",
-            "import": "./dist/tools/communication.js",
-            "require": "./dist/tools/communication.cjs"
-        },
-        "./tools/productivity": {
-            "types": "./dist/tools/productivity.d.ts",
-            "import": "./dist/tools/productivity.js",
-            "require": "./dist/tools/productivity.cjs"
-        },
-        "./tools/devtools": {
-            "types": "./dist/tools/devtools.d.ts",
-            "import": "./dist/tools/devtools.js",
-            "require": "./dist/tools/devtools.cjs"
-        },
-        "./tools/crm": {
-            "types": "./dist/tools/crm.d.ts",
-            "import": "./dist/tools/crm.js",
-            "require": "./dist/tools/crm.cjs"
-        },
-        "./tools/search": {
-            "types": "./dist/tools/search.d.ts",
-            "import": "./dist/tools/search.js",
-            "require": "./dist/tools/search.cjs"
-        },
-        "./tools/scraping": {
-            "types": "./dist/tools/scraping.d.ts",
-            "import": "./dist/tools/scraping.js",
-            "require": "./dist/tools/scraping.cjs"
-        },
-        "./tools/media": {
-            "types": "./dist/tools/media.d.ts",
-            "import": "./dist/tools/media.js",
-            "require": "./dist/tools/media.cjs"
-        },
-        "./tools/memory": {
-            "types": "./dist/tools/memory.d.ts",
-            "import": "./dist/tools/memory.js",
-            "require": "./dist/tools/memory.cjs"
-        },
-        "./tools/ai": {
-            "types": "./dist/tools/ai.d.ts",
-            "import": "./dist/tools/ai.js",
-            "require": "./dist/tools/ai.cjs"
-        },
-        "./tools/data": {
-            "types": "./dist/tools/data.d.ts",
-            "import": "./dist/tools/data.js",
-            "require": "./dist/tools/data.cjs"
-        },
-        "./tools/finance": {
-            "types": "./dist/tools/finance.d.ts",
-            "import": "./dist/tools/finance.js",
-            "require": "./dist/tools/finance.cjs"
-        },
-        "./tools/social": {
-            "types": "./dist/tools/social.d.ts",
-            "import": "./dist/tools/social.js",
-            "require": "./dist/tools/social.cjs"
-        },
-        "./runtime": {
-            "types": "./dist/runtime.d.ts",
-            "import": "./dist/runtime.js",
-            "require": "./dist/runtime.cjs"
-        },
-        "./create-agent": {
-            "types": "./dist/create-agent.d.ts",
-            "import": "./dist/create-agent.js",
-            "require": "./dist/create-agent.cjs"
-        },
-        "./contracts": {
-            "types": "./dist/contracts.d.ts",
-            "import": "./dist/contracts.js",
-            "require": "./dist/contracts.cjs"
-        },
-        "./plugins": {
-            "types": "./dist/plugins.d.ts",
-            "import": "./dist/plugins.js",
-            "require": "./dist/plugins.cjs"
-        },
-        "./knowledge": {
-            "types": "./dist/knowledge.d.ts",
-            "import": "./dist/knowledge.js",
-            "require": "./dist/knowledge.cjs"
-        },
-        "./storage": {
-            "types": "./dist/storage.d.ts",
-            "import": "./dist/storage.js",
-            "require": "./dist/storage.cjs"
-        },
-        "./adapters": {
-            "types": "./dist/adapters.d.ts",
-            "import": "./dist/adapters.js",
-            "require": "./dist/adapters.cjs"
-        },
-        "./background": {
-            "types": "./dist/background.d.ts",
-            "import": "./dist/background.js",
-            "require": "./dist/background.cjs"
-        },
-        "./testing": {
-            "types": "./dist/testing.d.ts",
-            "import": "./dist/testing.js",
-            "require": "./dist/testing.cjs"
-        },
-        "./learning": {
-            "types": "./dist/learning.d.ts",
-            "import": "./dist/learning.js",
-            "require": "./dist/learning.cjs"
-        },
-        "./video": {
-            "types": "./dist/video.d.ts",
-            "import": "./dist/video.js",
-            "require": "./dist/video.cjs"
-        },
-        "./config": {
-            "types": "./dist/config.d.ts",
-            "import": "./dist/config.js",
-            "require": "./dist/config.cjs"
-        },
-        "./dx": {
-            "types": "./dist/dx.d.ts",
-            "import": "./dist/dx.js",
-            "require": "./dist/dx.cjs"
-        },
-        "./sdk": {
-            "types": "./dist/sdk.d.ts",
-            "import": "./dist/sdk.js",
-            "require": "./dist/sdk.cjs"
-        },
-        "./graph": {
-            "types": "./dist/graph.d.ts",
-            "import": "./dist/graph.js",
-            "require": "./dist/graph.cjs"
-        },
-        "./model": {
-            "types": "./dist/model.d.ts",
-            "import": "./dist/model.js",
-            "require": "./dist/model.cjs"
-        },
-        "./tool": {
-            "types": "./dist/tool.d.ts",
-            "import": "./dist/tool.js",
-            "require": "./dist/tool.cjs"
-        },
-        "./workflow": {
-            "types": "./dist/workflow.d.ts",
-            "import": "./dist/workflow.js",
-            "require": "./dist/workflow.cjs"
-        },
-        "./guard": {
-            "types": "./dist/guard.d.ts",
-            "import": "./dist/guard.js",
-            "require": "./dist/guard.cjs"
-        },
-        "./serve": {
-            "types": "./dist/serve.d.ts",
-            "import": "./dist/serve.js",
-            "require": "./dist/serve.cjs"
-        },
-        "./observe": {
-            "types": "./dist/observe.d.ts",
-            "import": "./dist/observe.js",
-            "require": "./dist/observe.cjs"
-        },
-        "./test": {
-            "types": "./dist/test.d.ts",
-            "import": "./dist/test.js",
-            "require": "./dist/test.cjs"
-        },
-        "./playground": {
-            "types": "./dist/playground.d.ts",
-            "import": "./dist/playground.js",
-            "require": "./dist/playground.cjs"
-        }
+  "name": "confused-ai",
+  "version": "2.1.0",
+  "description": "TypeScript AI agent framework — 40+ LLM providers, 100+ tools, multi-agent orchestration, RAG, guardrails, circuit breakers, HITL, budget enforcement. Open-source CrewAI / LangChain alternative.",
+  "type": "module",
+  "packageManager": "bun@1.3.11",
+  "sideEffects": false,
+  "workspaces": [
+    "packages/*",
+    "packages/*/*"
+  ],
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.cjs",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.cts",
+    "!dist/**/*.map"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     },
-    "scripts": {
-        "example:simple": "bun examples/simple-agent.ts",
-        "example:showcase": "bun examples/framework-showcase.ts",
-        "example:potential": "bun examples/unlock-framework-potential.ts",
-        "example:persona": "bun examples/persona-builder.ts",
-        "example:meridian": "bun examples/meridian-platform.ts",
-        "example:graph": "bun examples/graph-workflow.ts",
-        "example:multi-agent": "bun examples/multi-agent-orchestration.ts",
-        "example:reasoning": "bun examples/reasoning-agent.ts",
-        "example:scheduled": "bun examples/scheduled-agent.ts",
-        "example:code-review": "bun examples/code-review-pipeline.ts",
-        "example:eval": "bun examples/eval-regression.ts",
-        "build": "bun run build:root",
-        "build:root": "tsup && node scripts/gen-root-dts.mjs",
-        "build:packages": "turbo run build --filter='./packages/*'",
-        "build:all": "bun run build:packages && bun run build:root",
-        "publish:packages": "node scripts/publish-packages.mjs",
-        "dev": "tsup --watch",
-        "typecheck": "tsc -p tsconfig.typecheck.json",
-        "test": "vitest run",
-        "test:watch": "vitest",
-        "test:coverage": "vitest run --coverage",
-        "bench": "vitest bench",
-        "lint": "eslint src --max-warnings 0",
-        "lint:packages": "eslint packages/foundation/contracts/src packages/runtime/core/src packages/platform/observe/src packages/platform/guard/src packages/platform/serve/src packages/providers/models/src packages/state/session/src packages/tools-layer/tools/src packages/runtime/workflow/src packages/state/knowledge/src packages/providers/router/src packages/developer/test-utils/src packages/state/adapter-redis/src --max-warnings 10",
-        "lint:fix": "eslint packages/foundation/contracts/src packages/runtime/core/src packages/tools-layer/tools/src packages/state/session/src --fix",
-        "check:bundle": "node scripts/check-bundle-size.mjs",
-        "check:docs": "node scripts/check-docs-claims.mjs",
-        "docs:dev": "vitepress dev docs",
-        "docs:build": "vitepress build docs",
-        "docs:preview": "vitepress preview docs",
-        "prepack": "npm run typecheck && npm run test && npm run build:all && bun run lint:packages || true",
-        "pack:inspect": "npm pack --dry-run"
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js",
+      "require": "./dist/core.cjs"
     },
-    "keywords": [
-        "ai-agent",
-        "ai-agent-framework",
-        "agent",
-        "agentic-ai",
-        "autonomous-agents",
-        "ai",
-        "artificial-intelligence",
-        "typescript",
-        "typescript-ai",
-        "framework",
-        "llm",
-        "llm-framework",
-        "llm-orchestration",
-        "llm-router",
-        "openai",
-        "anthropic",
-        "claude",
-        "gemini",
-        "groq",
-        "ollama",
-        "mistral",
-        "deepseek",
-        "bedrock",
-        "multi-agent",
-        "multi-agent-system",
-        "orchestration",
-        "rag",
-        "retrieval-augmented-generation",
-        "vector-store",
-        "embeddings",
-        "knowledge-base",
-        "mcp",
-        "model-context-protocol",
-        "tool-use",
-        "function-calling",
-        "workflow",
-        "dag-workflow",
-        "durable-execution",
-        "chatbot",
-        "react-agent",
-        "chain-of-thought",
-        "tree-of-thought",
-        "reasoning-agent",
-        "langchain-alternative",
-        "crewai-alternative",
-        "langgraph-alternative",
-        "autogen-alternative",
-        "production-ai",
-        "circuit-breaker",
-        "human-in-the-loop",
-        "hitl",
-        "guardrails",
-        "pii-detection",
-        "prompt-injection",
-        "content-moderation",
-        "observability",
-        "opentelemetry",
-        "prometheus",
-        "eval",
-        "llm-evaluation",
-        "llm-judge",
-        "multi-tenant",
-        "session-management",
-        "voice-ai",
-        "budget-enforcement",
-        "cost-control",
-        "rate-limiting",
-        "agent-framework",
-        "open-source-ai",
-        "bun"
-    ],
-    "author": {
-        "name": "rvuyyuru2",
-        "url": "https://github.com/rvuyyuru2"
+    "./memory": {
+      "types": "./dist/memory.d.ts",
+      "import": "./dist/memory.js",
+      "require": "./dist/memory.cjs"
     },
-    "license": "MIT",
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/confused-ai/confused-ai"
+    "./providers": {
+      "types": "./dist/providers.d.ts",
+      "import": "./dist/providers.js",
+      "require": "./dist/providers.cjs"
     },
-    "homepage": "https://confused-ai.github.io/confused-ai/",
-    "bugs": {
-        "url": "https://github.com/confused-ai/confused-ai/issues"
+    "./llm": {
+      "types": "./dist/providers.d.ts",
+      "import": "./dist/providers.js",
+      "require": "./dist/providers.cjs"
     },
-    "funding": {
-        "type": "github",
-        "url": "https://github.com/sponsors/rvuyyuru2"
+    "./tools": {
+      "types": "./dist/tools.d.ts",
+      "import": "./dist/tools.js",
+      "require": "./dist/tools.cjs"
     },
-    "devDependencies": {
-        "@aws-sdk/client-bedrock-runtime": "^3.1036.0",
-        "@types/bun": "latest",
-        "@types/uuid": "^9.0.8",
-        "@typescript-eslint/parser": "^8.59.0",
-        "@vitest/coverage-v8": "^4.0.18",
-        "better-sqlite3": "^11.0.0",
-        "dts-bundle-generator": "^9.5.1",
-        "eslint": "^10.2.1",
-        "eslint-plugin-boundaries": "^6.0.2",
-        "playwright": "^1.59.1",
-        "tsup": "^8.4.0",
-        "turbo": "^2.9.8",
-        "typescript": "^5.9.3",
-        "typescript-eslint": "^8.59.1",
-        "vitepress": "^1.6.4",
-        "vitest": "^4.0.18"
+    "./planner": {
+      "types": "./dist/planner.d.ts",
+      "import": "./dist/planner.js",
+      "require": "./dist/planner.cjs"
     },
-    "dependencies": {
-        "@confused-ai/adapter-redis": "0.1.0",
-        "@confused-ai/agentic": "0.1.0",
-        "@confused-ai/artifacts": "0.1.0",
-        "@confused-ai/background": "0.1.0",
-        "@confused-ai/cli": "0.1.0",
-        "@confused-ai/compression": "0.1.0",
-        "@confused-ai/config": "0.1.0",
-        "@confused-ai/context": "0.1.0",
-        "@confused-ai/contracts": "0.1.0",
-        "@confused-ai/core": "0.1.0",
-        "@confused-ai/db": "0.1.0",
-        "@confused-ai/eval": "0.1.0",
-        "@confused-ai/execution": "0.1.0",
-        "@confused-ai/graph": "0.1.0",
-        "@confused-ai/guard": "0.1.0",
-        "@confused-ai/guardrails": "0.1.0",
-        "@confused-ai/knowledge": "0.1.0",
-        "@confused-ai/learning": "0.1.0",
-        "@confused-ai/memory": "0.1.0",
-        "@confused-ai/models": "0.1.0",
-        "@confused-ai/observe": "0.1.0",
-        "@confused-ai/orchestration": "0.1.0",
-        "@confused-ai/planner": "0.1.0",
-        "@confused-ai/playground": "0.1.0",
-        "@confused-ai/plugins": "0.1.0",
-        "@confused-ai/production": "0.1.0",
-        "@confused-ai/reasoning": "0.1.0",
-        "@confused-ai/router": "0.1.0",
-        "@confused-ai/scheduler": "0.1.0",
-        "@confused-ai/sdk": "0.1.0",
-        "@confused-ai/serve": "0.1.0",
-        "@confused-ai/session": "0.1.0",
-        "@confused-ai/shared": "0.1.0",
-        "@confused-ai/storage": "0.1.0",
-        "@confused-ai/test-utils": "0.1.0",
-        "@confused-ai/tools": "0.1.0",
-        "@confused-ai/video": "0.1.0",
-        "@confused-ai/voice": "0.1.0",
-        "@confused-ai/workflow": "0.1.0",
-        "commander": "^14.0.3",
-        "dotenv": "^17.3.1",
-        "uuid": "^13.0.0",
-        "zod": "^4.3.6"
+    "./execution": {
+      "types": "./dist/execution.d.ts",
+      "import": "./dist/execution.js",
+      "require": "./dist/execution.cjs"
     },
-    "peerDependencies": {
-        "@aws-sdk/client-bedrock-runtime": "^3.0.0",
-        "@anthropic-ai/sdk": ">=0.30.0",
-        "@google/generative-ai": ">=0.5.0",
-        "@ffmpeg-installer/ffmpeg": "^1.1.0",
-        "better-sqlite3": "^11.0.0",
-        "duck-duck-scrape": ">=2.0.0",
-        "fluent-ffmpeg": "^2.1.3",
-        "ioredis": ">=5.0.0",
-        "ollama": ">=0.5.0",
-        "openai": "^6.17.0",
-        "pexels": "^1.4.0",
-        "playwright": "^1.0.0",
-        "yahoo-finance2": "^2.11.3"
+    "./orchestration": {
+      "types": "./dist/orchestration.d.ts",
+      "import": "./dist/orchestration.js",
+      "require": "./dist/orchestration.cjs"
     },
-    "peerDependenciesMeta": {
-        "@aws-sdk/client-bedrock-runtime": {
-            "optional": true
-        },
-        "@anthropic-ai/sdk": {
-            "optional": true
-        },
-        "@google/generative-ai": {
-            "optional": true
-        },
-        "@ffmpeg-installer/ffmpeg": {
-            "optional": true
-        },
-        "better-sqlite3": {
-            "optional": true
-        },
-        "duck-duck-scrape": {
-            "optional": true
-        },
-        "fluent-ffmpeg": {
-            "optional": true
-        },
-        "ioredis": {
-            "optional": true
-        },
-        "ollama": {
-            "optional": true
-        },
-        "openai": {
-            "optional": true
-        },
-        "pexels": {
-            "optional": true
-        },
-        "playwright": {
-            "optional": true
-        },
-        "yahoo-finance2": {
-            "optional": true
-        }
+    "./observability": {
+      "types": "./dist/observability.d.ts",
+      "import": "./dist/observability.js",
+      "require": "./dist/observability.cjs"
     },
-    "engines": {
-        "node": ">=18.0.0"
+    "./agentic": {
+      "types": "./dist/agentic.d.ts",
+      "import": "./dist/agentic.js",
+      "require": "./dist/agentic.cjs"
     },
-    "bin": {
-        "confused-ai": "dist/cli.js"
+    "./session": {
+      "types": "./dist/session.d.ts",
+      "import": "./dist/session.js",
+      "require": "./dist/session.cjs"
+    },
+    "./guardrails": {
+      "types": "./dist/guardrails.d.ts",
+      "import": "./dist/guardrails.js",
+      "require": "./dist/guardrails.cjs"
+    },
+    "./production": {
+      "types": "./dist/production.d.ts",
+      "import": "./dist/production.js",
+      "require": "./dist/production.cjs"
+    },
+    "./artifacts": {
+      "types": "./dist/artifacts.d.ts",
+      "import": "./dist/artifacts.js",
+      "require": "./dist/artifacts.cjs"
+    },
+    "./voice": {
+      "types": "./dist/voice.d.ts",
+      "import": "./dist/voice.js",
+      "require": "./dist/voice.cjs"
+    },
+    "./shared": {
+      "types": "./dist/shared.d.ts",
+      "import": "./dist/shared.js",
+      "require": "./dist/shared.cjs"
+    },
+    "./tools/shell": {
+      "types": "./dist/tools/shell.d.ts",
+      "import": "./dist/tools/shell.js",
+      "require": "./dist/tools/shell.cjs"
+    },
+    "./tools/core": {
+      "types": "./dist/tools/core.d.ts",
+      "import": "./dist/tools/core.js",
+      "require": "./dist/tools/core.cjs"
+    },
+    "./tools/mcp": {
+      "types": "./dist/tools/mcp.d.ts",
+      "import": "./dist/tools/mcp.js",
+      "require": "./dist/tools/mcp.cjs"
+    },
+    "./tools/utils": {
+      "types": "./dist/tools/utils.d.ts",
+      "import": "./dist/tools/utils.js",
+      "require": "./dist/tools/utils.cjs"
+    },
+    "./tools/communication": {
+      "types": "./dist/tools/communication.d.ts",
+      "import": "./dist/tools/communication.js",
+      "require": "./dist/tools/communication.cjs"
+    },
+    "./tools/productivity": {
+      "types": "./dist/tools/productivity.d.ts",
+      "import": "./dist/tools/productivity.js",
+      "require": "./dist/tools/productivity.cjs"
+    },
+    "./tools/devtools": {
+      "types": "./dist/tools/devtools.d.ts",
+      "import": "./dist/tools/devtools.js",
+      "require": "./dist/tools/devtools.cjs"
+    },
+    "./tools/crm": {
+      "types": "./dist/tools/crm.d.ts",
+      "import": "./dist/tools/crm.js",
+      "require": "./dist/tools/crm.cjs"
+    },
+    "./tools/search": {
+      "types": "./dist/tools/search.d.ts",
+      "import": "./dist/tools/search.js",
+      "require": "./dist/tools/search.cjs"
+    },
+    "./tools/scraping": {
+      "types": "./dist/tools/scraping.d.ts",
+      "import": "./dist/tools/scraping.js",
+      "require": "./dist/tools/scraping.cjs"
+    },
+    "./tools/media": {
+      "types": "./dist/tools/media.d.ts",
+      "import": "./dist/tools/media.js",
+      "require": "./dist/tools/media.cjs"
+    },
+    "./tools/memory": {
+      "types": "./dist/tools/memory.d.ts",
+      "import": "./dist/tools/memory.js",
+      "require": "./dist/tools/memory.cjs"
+    },
+    "./tools/ai": {
+      "types": "./dist/tools/ai.d.ts",
+      "import": "./dist/tools/ai.js",
+      "require": "./dist/tools/ai.cjs"
+    },
+    "./tools/data": {
+      "types": "./dist/tools/data.d.ts",
+      "import": "./dist/tools/data.js",
+      "require": "./dist/tools/data.cjs"
+    },
+    "./tools/finance": {
+      "types": "./dist/tools/finance.d.ts",
+      "import": "./dist/tools/finance.js",
+      "require": "./dist/tools/finance.cjs"
+    },
+    "./tools/social": {
+      "types": "./dist/tools/social.d.ts",
+      "import": "./dist/tools/social.js",
+      "require": "./dist/tools/social.cjs"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js",
+      "require": "./dist/runtime.cjs"
+    },
+    "./create-agent": {
+      "types": "./dist/create-agent.d.ts",
+      "import": "./dist/create-agent.js",
+      "require": "./dist/create-agent.cjs"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js",
+      "require": "./dist/contracts.cjs"
+    },
+    "./plugins": {
+      "types": "./dist/plugins.d.ts",
+      "import": "./dist/plugins.js",
+      "require": "./dist/plugins.cjs"
+    },
+    "./knowledge": {
+      "types": "./dist/knowledge.d.ts",
+      "import": "./dist/knowledge.js",
+      "require": "./dist/knowledge.cjs"
+    },
+    "./storage": {
+      "types": "./dist/storage.d.ts",
+      "import": "./dist/storage.js",
+      "require": "./dist/storage.cjs"
+    },
+    "./adapters": {
+      "types": "./dist/adapters.d.ts",
+      "import": "./dist/adapters.js",
+      "require": "./dist/adapters.cjs"
+    },
+    "./background": {
+      "types": "./dist/background.d.ts",
+      "import": "./dist/background.js",
+      "require": "./dist/background.cjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
+    },
+    "./learning": {
+      "types": "./dist/learning.d.ts",
+      "import": "./dist/learning.js",
+      "require": "./dist/learning.cjs"
+    },
+    "./video": {
+      "types": "./dist/video.d.ts",
+      "import": "./dist/video.js",
+      "require": "./dist/video.cjs"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js",
+      "require": "./dist/config.cjs"
+    },
+    "./dx": {
+      "types": "./dist/dx.d.ts",
+      "import": "./dist/dx.js",
+      "require": "./dist/dx.cjs"
+    },
+    "./sdk": {
+      "types": "./dist/sdk.d.ts",
+      "import": "./dist/sdk.js",
+      "require": "./dist/sdk.cjs"
+    },
+    "./graph": {
+      "types": "./dist/graph.d.ts",
+      "import": "./dist/graph.js",
+      "require": "./dist/graph.cjs"
+    },
+    "./model": {
+      "types": "./dist/model.d.ts",
+      "import": "./dist/model.js",
+      "require": "./dist/model.cjs"
+    },
+    "./tool": {
+      "types": "./dist/tool.d.ts",
+      "import": "./dist/tool.js",
+      "require": "./dist/tool.cjs"
+    },
+    "./workflow": {
+      "types": "./dist/workflow.d.ts",
+      "import": "./dist/workflow.js",
+      "require": "./dist/workflow.cjs"
+    },
+    "./guard": {
+      "types": "./dist/guard.d.ts",
+      "import": "./dist/guard.js",
+      "require": "./dist/guard.cjs"
+    },
+    "./serve": {
+      "types": "./dist/serve.d.ts",
+      "import": "./dist/serve.js",
+      "require": "./dist/serve.cjs"
+    },
+    "./observe": {
+      "types": "./dist/observe.d.ts",
+      "import": "./dist/observe.js",
+      "require": "./dist/observe.cjs"
+    },
+    "./test": {
+      "types": "./dist/test.d.ts",
+      "import": "./dist/test.js",
+      "require": "./dist/test.cjs"
+    },
+    "./playground": {
+      "types": "./dist/playground.d.ts",
+      "import": "./dist/playground.js",
+      "require": "./dist/playground.cjs"
+    },
+    "./adapter-redis": {
+      "types": "./dist/adapter-redis.d.ts",
+      "import": "./dist/adapter-redis.js",
+      "require": "./dist/adapter-redis.cjs"
+    },
+    "./cli": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js",
+      "require": "./dist/cli.cjs"
+    },
+    "./compression": {
+      "types": "./dist/compression.d.ts",
+      "import": "./dist/compression.js",
+      "require": "./dist/compression.cjs"
+    },
+    "./context": {
+      "types": "./dist/context.d.ts",
+      "import": "./dist/context.js",
+      "require": "./dist/context.cjs"
+    },
+    "./db": {
+      "types": "./dist/db.d.ts",
+      "import": "./dist/db.js",
+      "require": "./dist/db.cjs"
+    },
+    "./eval": {
+      "types": "./dist/eval.d.ts",
+      "import": "./dist/eval.js",
+      "require": "./dist/eval.cjs"
+    },
+    "./models": {
+      "types": "./dist/models.d.ts",
+      "import": "./dist/models.js",
+      "require": "./dist/models.cjs"
+    },
+    "./reasoning": {
+      "types": "./dist/reasoning.d.ts",
+      "import": "./dist/reasoning.js",
+      "require": "./dist/reasoning.cjs"
+    },
+    "./router": {
+      "types": "./dist/router.d.ts",
+      "import": "./dist/router.js",
+      "require": "./dist/router.cjs"
+    },
+    "./scheduler": {
+      "types": "./dist/scheduler.d.ts",
+      "import": "./dist/scheduler.js",
+      "require": "./dist/scheduler.cjs"
+    },
+    "./skills": {
+      "types": "./dist/skills.d.ts",
+      "import": "./dist/skills.js",
+      "require": "./dist/skills.cjs"
+    },
+    "./test-utils": {
+      "types": "./dist/test-utils.d.ts",
+      "import": "./dist/test-utils.js",
+      "require": "./dist/test-utils.cjs"
+    },
+    "./test-utils/conformance": {
+      "types": "./dist/test-utils/conformance.d.ts",
+      "import": "./dist/test-utils/conformance.js",
+      "require": "./dist/test-utils/conformance.cjs"
     }
+  },
+  "scripts": {
+    "example:simple": "bun examples/simple-agent.ts",
+    "example:showcase": "bun examples/framework-showcase.ts",
+    "example:potential": "bun examples/unlock-framework-potential.ts",
+    "example:persona": "bun examples/persona-builder.ts",
+    "example:meridian": "bun examples/meridian-platform.ts",
+    "example:graph": "bun examples/graph-workflow.ts",
+    "example:multi-agent": "bun examples/multi-agent-orchestration.ts",
+    "example:reasoning": "bun examples/reasoning-agent.ts",
+    "example:scheduled": "bun examples/scheduled-agent.ts",
+    "example:code-review": "bun examples/code-review-pipeline.ts",
+    "example:eval": "bun examples/eval-regression.ts",
+    "build": "bun run build:root",
+    "build:root": "tsup && node scripts/gen-root-dts.mjs",
+    "build:packages": "turbo run build --filter='@confused-ai/*' --output-logs=errors-only",
+    "build:all": "bun run build:packages && bun run build:root",
+    "package:sync": "node scripts/sync-package-manifests.mjs",
+    "package:check": "node scripts/sync-package-manifests.mjs --check && node scripts/validate-package-access.mjs",
+    "package:prepare": "npm run package:sync && npm run build:all && npm run package:check",
+    "publish:packages": "node scripts/publish-packages.mjs",
+    "publish:packages:dry-run": "node scripts/publish-packages.mjs --dry-run",
+    "dev": "tsup --watch",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "bench": "vitest bench",
+    "lint": "eslint src --max-warnings 0",
+    "lint:packages": "eslint packages/foundation/contracts/src packages/runtime/core/src packages/platform/observe/src packages/platform/guard/src packages/platform/serve/src packages/providers/models/src packages/state/session/src packages/tools-layer/tools/src packages/runtime/workflow/src packages/state/knowledge/src packages/providers/router/src packages/developer/test-utils/src packages/state/adapter-redis/src --max-warnings 10",
+    "lint:fix": "eslint packages/foundation/contracts/src packages/runtime/core/src packages/tools-layer/tools/src packages/state/session/src --fix",
+    "check:bundle": "node scripts/check-bundle-size.mjs",
+    "check:docs": "node scripts/check-docs-claims.mjs",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "prepack": "npm run typecheck && npm run test && npm run package:prepare && bun run lint:packages || true",
+    "pack:inspect": "npm pack --dry-run"
+  },
+  "keywords": [
+    "ai-agent",
+    "ai-agent-framework",
+    "agent",
+    "agentic-ai",
+    "autonomous-agents",
+    "ai",
+    "artificial-intelligence",
+    "typescript",
+    "typescript-ai",
+    "framework",
+    "llm",
+    "llm-framework",
+    "llm-orchestration",
+    "llm-router",
+    "openai",
+    "anthropic",
+    "claude",
+    "gemini",
+    "groq",
+    "ollama",
+    "mistral",
+    "deepseek",
+    "bedrock",
+    "multi-agent",
+    "multi-agent-system",
+    "orchestration",
+    "rag",
+    "retrieval-augmented-generation",
+    "vector-store",
+    "embeddings",
+    "knowledge-base",
+    "mcp",
+    "model-context-protocol",
+    "tool-use",
+    "function-calling",
+    "workflow",
+    "dag-workflow",
+    "durable-execution",
+    "chatbot",
+    "react-agent",
+    "chain-of-thought",
+    "tree-of-thought",
+    "reasoning-agent",
+    "langchain-alternative",
+    "crewai-alternative",
+    "langgraph-alternative",
+    "autogen-alternative",
+    "production-ai",
+    "circuit-breaker",
+    "human-in-the-loop",
+    "hitl",
+    "guardrails",
+    "pii-detection",
+    "prompt-injection",
+    "content-moderation",
+    "observability",
+    "opentelemetry",
+    "prometheus",
+    "eval",
+    "llm-evaluation",
+    "llm-judge",
+    "multi-tenant",
+    "session-management",
+    "voice-ai",
+    "budget-enforcement",
+    "cost-control",
+    "rate-limiting",
+    "agent-framework",
+    "open-source-ai",
+    "bun"
+  ],
+  "author": {
+    "name": "rvuyyuru2",
+    "url": "https://github.com/rvuyyuru2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/confused-ai/confused-ai"
+  },
+  "homepage": "https://confused-ai.github.io/confused-ai/",
+  "bugs": {
+    "url": "https://github.com/confused-ai/confused-ai/issues"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/rvuyyuru2"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1036.0",
+    "@types/bun": "latest",
+    "@types/uuid": "^9.0.8",
+    "@typescript-eslint/parser": "^8.59.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "better-sqlite3": "^11.0.0",
+    "dts-bundle-generator": "^9.5.1",
+    "eslint": "^10.2.1",
+    "eslint-plugin-boundaries": "^6.0.2",
+    "playwright": "^1.59.1",
+    "tsup": "^8.4.0",
+    "turbo": "^2.9.8",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.1",
+    "vitepress": "^1.6.4",
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "@confused-ai/adapter-redis": "0.1.0",
+    "@confused-ai/agentic": "0.1.0",
+    "@confused-ai/artifacts": "0.1.0",
+    "@confused-ai/background": "0.1.0",
+    "@confused-ai/cli": "0.1.0",
+    "@confused-ai/compression": "0.1.0",
+    "@confused-ai/config": "0.1.0",
+    "@confused-ai/context": "0.1.0",
+    "@confused-ai/contracts": "0.1.0",
+    "@confused-ai/core": "0.1.0",
+    "@confused-ai/db": "0.1.0",
+    "@confused-ai/eval": "0.1.0",
+    "@confused-ai/execution": "0.1.0",
+    "@confused-ai/graph": "0.1.0",
+    "@confused-ai/guard": "0.1.0",
+    "@confused-ai/guardrails": "0.1.0",
+    "@confused-ai/knowledge": "0.1.0",
+    "@confused-ai/learning": "0.1.0",
+    "@confused-ai/memory": "0.1.0",
+    "@confused-ai/models": "0.1.0",
+    "@confused-ai/observe": "0.1.0",
+    "@confused-ai/orchestration": "0.1.0",
+    "@confused-ai/planner": "0.1.0",
+    "@confused-ai/playground": "0.1.0",
+    "@confused-ai/plugins": "0.1.0",
+    "@confused-ai/production": "0.1.0",
+    "@confused-ai/reasoning": "0.1.0",
+    "@confused-ai/router": "0.1.0",
+    "@confused-ai/scheduler": "0.1.0",
+    "@confused-ai/sdk": "0.1.0",
+    "@confused-ai/serve": "0.1.0",
+    "@confused-ai/session": "0.1.0",
+    "@confused-ai/shared": "0.1.0",
+    "@confused-ai/storage": "0.1.0",
+    "@confused-ai/test-utils": "0.1.0",
+    "@confused-ai/tools": "0.1.0",
+    "@confused-ai/video": "0.1.0",
+    "@confused-ai/voice": "0.1.0",
+    "@confused-ai/workflow": "0.1.0",
+    "commander": "^14.0.3",
+    "dotenv": "^17.3.1",
+    "uuid": "^13.0.0",
+    "zod": "^4.3.6",
+    "@confused-ai/skills": "0.1.0"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.0.0",
+    "@anthropic-ai/sdk": ">=0.30.0",
+    "@google/generative-ai": ">=0.5.0",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "better-sqlite3": "^11.0.0",
+    "duck-duck-scrape": ">=2.0.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "ioredis": ">=5.0.0",
+    "ollama": ">=0.5.0",
+    "openai": "^6.17.0",
+    "pexels": "^1.4.0",
+    "playwright": "^1.0.0",
+    "yahoo-finance2": "^2.11.3"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-bedrock-runtime": {
+      "optional": true
+    },
+    "@anthropic-ai/sdk": {
+      "optional": true
+    },
+    "@google/generative-ai": {
+      "optional": true
+    },
+    "@ffmpeg-installer/ffmpeg": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    },
+    "duck-duck-scrape": {
+      "optional": true
+    },
+    "fluent-ffmpeg": {
+      "optional": true
+    },
+    "ioredis": {
+      "optional": true
+    },
+    "ollama": {
+      "optional": true
+    },
+    "openai": {
+      "optional": true
+    },
+    "pexels": {
+      "optional": true
+    },
+    "playwright": {
+      "optional": true
+    },
+    "yahoo-finance2": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "bin": {
+    "confused-ai": "dist/cli.js"
+  }
 }

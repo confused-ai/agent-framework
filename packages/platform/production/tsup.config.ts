@@ -8,6 +8,6 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   treeshake: true,
-  // better-sqlite3 is optional peer dep — never bundle
-  external: ['better-sqlite3'],
+  // Keep workspace packages and optional peers external for stable package builds.
+  external: [/^@confused-ai\//, 'better-sqlite3'],
 });

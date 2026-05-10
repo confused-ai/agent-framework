@@ -24,7 +24,7 @@
  * ```
  */
 
-import type { SessionStore, SessionData, SessionMessage } from '@confused-ai/session';
+import { InMemorySessionStore, type SessionStore, type SessionData, type SessionMessage } from '@confused-ai/session';
 import { RateLimiter } from './rate-limiter.js';
 import type { RateLimiterConfig } from './rate-limiter.js';
 
@@ -165,8 +165,5 @@ export function createTenantContext(
 // ── Fallback session store (in-memory) ────────────────────────────────────
 
 function createFallbackSessionStore(): SessionStore {
-    // Lazy import to avoid circular deps
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { InMemorySessionStore } = require('../session/in-memory-store.js') as { InMemorySessionStore: new () => SessionStore };
     return new InMemorySessionStore();
 }

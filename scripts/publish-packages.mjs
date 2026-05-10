@@ -8,23 +8,30 @@
  */
 
 import { execSync } from 'child_process';
-import { readFileSync, existsSync } from 'fs';
+import { existsSync } from 'fs';
 import { resolve } from 'path';
-import { fileURLToPath } from 'url';
-import { readdirSync } from 'fs';
-
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
-const root = resolve(__dirname, '..');
-const packagesDir = resolve(root, 'packages');
+import { discoverPackageDirs, readPackageJson, relativeToRoot, root } from './package-workspaces.mjs';
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
+const skipPrepare = args.includes('--skip-prepare');
 const access = args.includes('--access') ? args[args.indexOf('--access') + 1] : 'public';
 
-const packages = readdirSync(packagesDir).filter(d =>
-  existsSync(resolve(packagesDir, d, 'package.json')) &&
-  existsSync(resolve(packagesDir, d, 'dist'))
-);
+if (!skipPrepare) {
+  console.log('Preparing packages before publish...\n');
+  execSync('npm run package:prepare', { cwd: root, stdio: 'inherit' });
+}
+
+const packages = discoverPackageDirs({ includePrivate: false });
+const missingDist = packages.filter((pkgDir) => !existsSync(resolve(pkgDir, 'dist')));
+
+if (missingDist.length) {
+  console.error('Cannot publish: these packages are missing dist/. Run npm run build:packages first.');
+  for (const pkgDir of missingDist) {
+    console.error(`  - ${relativeToRoot(pkgDir)}`);
+  }
+  process.exit(1);
+}
 
 console.log(`Publishing ${packages.length} packages (access=${access}, dryRun=${dryRun})\n`);
 
@@ -32,9 +39,8 @@ let ok = 0;
 let failed = 0;
 const failures = [];
 
-for (const pkg of packages) {
-  const pkgDir = resolve(packagesDir, pkg);
-  const pkgJson = JSON.parse(readFileSync(resolve(pkgDir, 'package.json'), 'utf8'));
+for (const pkgDir of packages) {
+  const pkgJson = readPackageJson(pkgDir);
   const name = pkgJson.name;
   const version = pkgJson.version;
 

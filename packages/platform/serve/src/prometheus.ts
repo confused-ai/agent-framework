@@ -28,9 +28,6 @@
  * @module
  */
 
-import { createRequire } from 'node:module';
-const _require = createRequire(import.meta.url);
-
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface PrometheusMetricsOptions {

@@ -3,20 +3,21 @@
   "version": "0.1.0",
   "description": "Background queue adapters for AI agent hooks: BullMQ, Kafka, RabbitMQ, Redis, SQS, in-memory",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@confused-ai/contracts": "*"
+    "@confused-ai/contracts": "0.1.0"
   },
   "peerDependencies": {
     "bullmq": ">=4.0.0",
@@ -49,5 +50,9 @@
   "files": [
     "dist"
   ],
-  "module": "./dist/index.js"
+  "sideEffects": false,
+  "module": "./dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  }
 }

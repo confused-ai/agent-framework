@@ -10,9 +10,9 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   external: [
+    /^@confused-ai\//,
     'commander',
     'confused-ai',
     'confused-ai/graph',
-    '@confused-ai/shared',
   ],
 });

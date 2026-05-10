@@ -30,7 +30,13 @@ yarn add confused-ai
 ```
 :::
 
-Installing `confused-ai` automatically includes all **39 `@confused-ai/*` sub-packages** as dependencies.
+Installing `confused-ai` automatically includes all **40 public `@confused-ai/*` packages** as dependencies. The root package is the full batteries-included install, and it also exposes tree-shakeable subpaths for focused imports.
+
+```ts
+import { agent } from 'confused-ai';
+import { createAgent } from 'confused-ai/core';
+import { createAgent } from '@confused-ai/core';
+```
 
 ::: details Install individual packages instead (smaller footprint)
 ```bash
@@ -50,8 +56,10 @@ npm install @confused-ai/memory
 npm install @confused-ai/observe
 ```
 
-Every `@confused-ai/*` package is published to npm and can be used standalone.
+Every public `@confused-ai/*` package is published to npm and can be used standalone.
 :::
+
+See [Packages & Imports](/guide/packages) for the complete install and export model.
 
 Then set your API key in the environment:
 

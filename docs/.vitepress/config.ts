@@ -76,6 +76,7 @@ export default defineConfig({
                 text: 'Ecosystem',
                 items: [
                     { text: '📦 All Modules', link: '/guide/all-modules' },
+                    { text: '📦 Packages & Imports', link: '/guide/packages' },
                     { text: '🔌 Adapters System', link: '/guide/adapters' },
                     { text: '🧩 Plugins', link: '/guide/plugins' },
                     { text: '🤝 MCP Client', link: '/guide/mcp' },
@@ -105,6 +106,7 @@ export default defineConfig({
                     items: [
                         { text: 'Getting Started', link: '/guide/getting-started' },
                         { text: 'Core Concepts', link: '/guide/concepts' },
+                        { text: 'Packages & Imports', link: '/guide/packages' },
                         { text: 'All Modules Reference', link: '/guide/all-modules' },
                         { text: 'Adapters System', link: '/guide/adapters' },
                     ],

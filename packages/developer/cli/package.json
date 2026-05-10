@@ -21,18 +21,21 @@
     "src"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "sideEffects": false,
   "dependencies": {
-    "@confused-ai/graph": "*",
-    "@confused-ai/shared": "*",
+    "@confused-ai/graph": "0.1.0",
+    "@confused-ai/shared": "0.1.0",
     "commander": "^14.0.3"
   },
   "peerDependencies": {
     "confused-ai": "^1.1.6"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

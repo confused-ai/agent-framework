@@ -37,19 +37,19 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint src --max-warnings 0"
   },
   "dependencies": {
-    "@confused-ai/contracts": "*",
+    "@confused-ai/contracts": "0.1.0",
     "zod": ">=3.22.0"
   },
   "peerDependencies": {
-    "@confused-ai/db": "*",
-    "@confused-ai/guard": "*",
-    "@confused-ai/observe": "*"
+    "@confused-ai/db": "0.1.0",
+    "@confused-ai/guard": "0.1.0",
+    "@confused-ai/observe": "0.1.0"
   },
   "peerDependenciesMeta": {
     "@confused-ai/db": {
@@ -68,5 +68,8 @@
     "vitest": "^4.0.18"
   },
   "license": "MIT",
-  "module": "./dist/index.js"
+  "module": "./dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  }
 }

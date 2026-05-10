@@ -3,22 +3,23 @@
   "version": "0.1.0",
   "description": "Learning machine: user profiles, session memory, cross-session knowledge for AI agents",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {},
   "peerDependencies": {
     "better-sqlite3": ">=9.0.0",
-    "@confused-ai/db": "*"
+    "@confused-ai/db": "0.1.0"
   },
   "peerDependenciesMeta": {
     "better-sqlite3": {
@@ -35,5 +36,9 @@
   "files": [
     "dist"
   ],
-  "module": "./dist/index.js"
+  "sideEffects": false,
+  "module": "./dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  }
 }

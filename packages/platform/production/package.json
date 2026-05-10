@@ -3,25 +3,26 @@
   "version": "0.1.0",
   "description": "Production-grade runtime, resilience, and control-plane utilities for confused-ai agents",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "@confused-ai/contracts": "*",
-    "@confused-ai/core": "*",
-    "@confused-ai/session": "*",
-    "@confused-ai/shared": "*"
+    "@confused-ai/contracts": "0.1.0",
+    "@confused-ai/core": "0.1.0",
+    "@confused-ai/memory": "0.1.0",
+    "@confused-ai/session": "0.1.0",
+    "@confused-ai/shared": "0.1.0"
   },
   "peerDependencies": {
     "better-sqlite3": ">=9.0.0"
@@ -38,5 +39,10 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "sideEffects": false,
+  "module": "./dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  }
 }

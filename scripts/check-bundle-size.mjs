@@ -2,55 +2,84 @@
 /**
  * scripts/check-bundle-size.mjs
  *
- * Bundles the public confused-ai entry point with esbuild, gzips the output,
- * and fails (exit 1) if the gzip size exceeds the 80 kB gate.
+ * Bundles a public confused-ai entry point with esbuild, gzips the output,
+ * and fails (exit 1) if the gzip size exceeds the configured gate.
  *
  * Heavy optional deps (playwright, pg, openai, anthropic, ioredis, …) are
  * treated as externals — they must NOT appear in the bundle.
  *
  * Usage:
- *   node scripts/check-bundle-size.mjs          # defaults
- *   BUNDLE_MAX_KB=120 node scripts/check-bundle-size.mjs  # custom limit
+ *   node scripts/check-bundle-size.mjs
+ *   node scripts/check-bundle-size.mjs --entry src/lite.ts --max-kb 50
  */
 
 import { build } from 'esbuild';
 import { gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
-import { join, dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..');
+const ROOT = resolve(__dirname, '..');
 
-const MAX_GZIP_BYTES = Number(process.env.BUNDLE_MAX_KB ?? 80) * 1024;
+function getArgValue(flag) {
+  const index = process.argv.indexOf(flag);
+  if (index === -1) {
+    return undefined;
+  }
+
+  const value = process.argv[index + 1];
+  if (!value || value.startsWith('--')) {
+    throw new Error(`Missing value for ${flag}`);
+  }
+
+  return value;
+}
+
+const entryArg = getArgValue('--entry') ?? process.env.BUNDLE_ENTRY ?? 'src/index.ts';
+const labelArg = getArgValue('--label') ?? process.env.BUNDLE_LABEL ?? entryArg;
+const maxKbArg = getArgValue('--max-kb') ?? process.env.BUNDLE_MAX_KB ?? '80';
+
+const MAX_GZIP_BYTES = Number(maxKbArg) * 1024;
 
 // Known heavy optional peers — must never land in the bundle.
 const EXTERNAL = [
+  '@anthropic-ai/sdk',
+  '@aws-sdk/client-bedrock-runtime',
+  '@aws-sdk/client-secrets-manager',
+  '@aws-sdk/client-sqs',
+  '@azure/identity',
+  '@azure/keyvault-secrets',
+  '@ffmpeg-installer/ffmpeg',
+  '@google-cloud/secret-manager',
+  '@google/generative-ai',
+  '@sendgrid/mail',
+  'amqplib',
+  'better-sqlite3',
+  'bullmq',
+  'chromadb',
+  'duck-duck-scrape',
+  'fluent-ffmpeg',
+  'ioredis',
+  'js-tiktoken',
+  'kafkajs',
+  'mysql2',
+  'mysql2/promise',
+  'neo4j-driver',
+  'nodemailer',
+  'ollama',
+  'openai',
+  'pdf-parse',
+  'pexels',
   'playwright',
   'playwright-core',
   'pg',
   'pg-native',
-  'better-sqlite3',
-  'openai',
-  '@anthropic-ai/sdk',
-  '@google/generative-ai',
-  'ioredis',
-  'pdf-parse',
-  '@aws-sdk/client-secrets-manager',
-  '@azure/keyvault-secrets',
-  '@azure/identity',
-  '@google-cloud/secret-manager',
-  'neo4j-driver',
-  'chromadb',
-  'bullmq',
-  'ioredis',
-  '@aws-sdk/client-sqs',
-  'amqplib',
-  'kafkajs',
-  'js-tiktoken',
-  '@anthropic-ai/sdk',
+  'stripe',
+  'twilio',
+  'yahoo-finance2',
 ];
 
-const entry = join(ROOT, 'src', 'index.ts');
+const entry = resolve(ROOT, entryArg);
 
 const result = await build({
   entryPoints: [entry],
@@ -76,7 +105,7 @@ const rawKb = (code.byteLength / 1024).toFixed(1);
 const limitKb = (MAX_GZIP_BYTES / 1024).toFixed(0);
 const status = gzipped.byteLength <= MAX_GZIP_BYTES ? '✓ PASS' : '✗ FAIL';
 
-console.log(`Bundle size check`);
+console.log(`Bundle size check (${labelArg})`);
 console.log(`  Raw:    ${rawKb} kB`);
 console.log(`  Gzip:   ${gzipKb} kB  (limit: ${limitKb} kB)  ${status}`);
 
@@ -84,7 +113,7 @@ if (gzipped.byteLength > MAX_GZIP_BYTES) {
   console.error(
     `\nBundle exceeds the ${limitKb} kB gzip limit by ` +
     `${((gzipped.byteLength - MAX_GZIP_BYTES) / 1024).toFixed(1)} kB.\n` +
-    `Check for accidental inclusion of heavy dependencies.\n` +
+    `Check for accidental inclusion of heavy dependencies in ${labelArg}.\n` +
     `Tip: run with BUNDLE_MAX_KB=<new-limit> to temporarily raise the gate.`,
   );
   process.exit(1);

@@ -33,14 +33,45 @@
  * ```
  */
 
-import { z, type ZodObject, type ZodType, type ZodRawShape } from 'zod';
 import type { ToolResult, ToolPermissions } from './types.js';
 import { ToolCategory } from './types.js';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+type SafeParseResult<TData> =
+    | { success: true; data: TData }
+    | { success: false; error: { message: string } };
+
+interface SchemaDefLike {
+    typeName?: string;
+    type?: unknown;
+    innerType?: unknown;
+    values?: unknown;
+    defaultValue?: unknown;
+}
+
+export interface ToolSchemaLike<TData = unknown> {
+    readonly description?: string;
+    readonly shape?: Record<string, ToolSchemaLike<unknown>>;
+    readonly _def?: SchemaDefLike;
+    safeParse(input: unknown): SafeParseResult<TData>;
+    strict?(): ToolObjectSchemaLike<Record<string, unknown>>;
+    isOptional?(): boolean;
+    isNullable?(): boolean;
+}
+
+export interface ToolObjectSchemaLike<TData extends Record<string, unknown> = Record<string, unknown>>
+    extends ToolSchemaLike<TData> {
+    readonly shape?: Record<string, ToolSchemaLike<unknown>>;
+}
+
+type InferToolSchema<TSchema> =
+    TSchema extends { _output: infer TOutput } ? TOutput :
+        TSchema extends { _type: infer TType } ? TType :
+            TSchema extends ToolSchemaLike<infer TData> ? TData : never;
+
 /** Options for the `tool()` helper. */
-export interface ToolHelperConfig<TSchema extends ZodObject<ZodRawShape>, TOutput = unknown> {
+export interface ToolHelperConfig<TSchema extends ToolObjectSchemaLike<Record<string, unknown>>, TOutput = unknown> {
     /** Unique tool name (used as ID). */
     readonly name: string;
     /** Human-readable description for the LLM. */
@@ -48,11 +79,11 @@ export interface ToolHelperConfig<TSchema extends ZodObject<ZodRawShape>, TOutpu
     /** Zod schema for parameters. */
     readonly parameters: TSchema;
     /** Optional Zod schema for output validation. */
-    readonly outputSchema?: ZodType<TOutput>;
+    readonly outputSchema?: ToolSchemaLike<TOutput>;
     /** Execute function. */
-    readonly execute: (params: z.infer<TSchema>, context: SimpleToolContext) => Promise<TOutput> | TOutput;
+    readonly execute: (params: InferToolSchema<TSchema>, context: SimpleToolContext) => Promise<TOutput> | TOutput;
     /** Require human approval before execution. Default: false. */
-    readonly needsApproval?: boolean | ((params: z.infer<TSchema>) => boolean | Promise<boolean>);
+    readonly needsApproval?: boolean | ((params: InferToolSchema<TSchema>) => boolean | Promise<boolean>);
     /** Category for organization. Default: 'custom'. */
     readonly category?: ToolCategory;
     /** Tags for discoverability. */
@@ -66,7 +97,7 @@ export interface ToolHelperConfig<TSchema extends ZodObject<ZodRawShape>, TOutpu
     /** Called when tool input chunk arrives (streaming). */
     readonly onInputDelta?: (toolName: string, delta: string) => void;
     /** Called when full tool input is available. */
-    readonly onInputAvailable?: (toolName: string, input: z.infer<TSchema>) => void;
+    readonly onInputAvailable?: (toolName: string, input: InferToolSchema<TSchema>) => void;
     /** Transform tool output before returning to model. */
     readonly toModelOutput?: (output: TOutput) => unknown;
 }
@@ -79,19 +110,22 @@ export interface SimpleToolContext {
 }
 
 /** A lightweight tool created by the `tool()` helper. */
-export interface LightweightTool<TSchema extends ZodObject<ZodRawShape> = ZodObject<ZodRawShape>, TOutput = unknown> {
+export interface LightweightTool<
+    TSchema extends ToolObjectSchemaLike<Record<string, unknown>> = ToolObjectSchemaLike<Record<string, unknown>>,
+    TOutput = unknown,
+> {
     readonly name: string;
     readonly description: string;
     readonly parameters: TSchema;
-    readonly outputSchema?: ZodType<TOutput>;
+    readonly outputSchema?: ToolSchemaLike<TOutput>;
     readonly category: ToolCategory;
     readonly tags: string[];
-    readonly needsApproval: boolean | ((params: z.infer<TSchema>) => boolean | Promise<boolean>);
+    readonly needsApproval: boolean | ((params: InferToolSchema<TSchema>) => boolean | Promise<boolean>);
     readonly strict: boolean;
     /** Execute with full validation. */
-    execute(params: z.infer<TSchema>, context?: Partial<SimpleToolContext>): Promise<ToolResult<TOutput>>;
+    execute(params: InferToolSchema<TSchema>, context?: Partial<SimpleToolContext>): Promise<ToolResult<TOutput>>;
     /** Validate params without executing. */
-    validate(params: unknown): { success: true; data: z.infer<TSchema> } | { success: false; error: unknown };
+    validate(params: unknown): { success: true; data: InferToolSchema<TSchema> } | { success: false; error: unknown };
     /** Convert to the framework's full Tool interface. */
     toFrameworkTool(): import('@confused-ai/core').Tool;
     /** Get JSON Schema representation for LLM function calling. */
@@ -100,7 +134,7 @@ export interface LightweightTool<TSchema extends ZodObject<ZodRawShape> = ZodObj
     readonly hooks: {
         readonly onInputStart?: (toolName: string) => void;
         readonly onInputDelta?: (toolName: string, delta: string) => void;
-        readonly onInputAvailable?: (toolName: string, input: z.infer<TSchema>) => void;
+        readonly onInputAvailable?: (toolName: string, input: InferToolSchema<TSchema>) => void;
     };
     /** Transform output for model. */
     readonly toModelOutput?: (output: TOutput) => unknown;
@@ -113,7 +147,7 @@ export interface LightweightTool<TSchema extends ZodObject<ZodRawShape> = ZodObj
  *
  * One function, Zod parameters, auto-validation, type-safe execute.
  */
-export function tool<TSchema extends ZodObject<ZodRawShape>, TOutput = unknown>(
+export function tool<TSchema extends ToolObjectSchemaLike<Record<string, unknown>>, TOutput = unknown>(
     config: ToolHelperConfig<TSchema, TOutput>,
 ): LightweightTool<TSchema, TOutput> {
     const {
@@ -167,13 +201,13 @@ export function tool<TSchema extends ZodObject<ZodRawShape>, TOutput = unknown>(
             }
 
             // Notify hooks
-            onInputAvailable?.(name, parseResult.data);
+            onInputAvailable?.(name, parseResult.data as InferToolSchema<TSchema>);
 
             try {
                 // Execute with timeout — timer is always cleared to prevent GC leak
                 let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
                 const result = await Promise.race([
-                    execute(parseResult.data as z.infer<TSchema>, ctx),
+                    execute(parseResult.data as InferToolSchema<TSchema>, ctx),
                     new Promise<never>((_, reject) => {
                         timeoutHandle = setTimeout(
                             () => { reject(new Error(`Tool '${name}' timed out after ${String(timeoutMs)}ms`)); },
@@ -221,12 +255,15 @@ export function tool<TSchema extends ZodObject<ZodRawShape>, TOutput = unknown>(
         },
 
         validate(params) {
+            const schema = strict && typeof parameters.strict === 'function'
+                ? (parameters.strict() as TSchema)
+                : parameters;
             const result = strict
-                ? parameters.strict().safeParse(params)
+                ? schema.safeParse(params)
                 : parameters.safeParse(params);
 
             if (result.success) {
-                return { success: true, data: result.data };
+                return { success: true, data: result.data as InferToolSchema<TSchema> };
             }
             return { success: false, error: result.error };
         },
@@ -248,12 +285,12 @@ export function tool<TSchema extends ZodObject<ZodRawShape>, TOutput = unknown>(
                 version: '1.0.0',
                 tags,
                 execute: async (input: Record<string, unknown>) => {
-                    return lightweight.execute(input, {
+                    return lightweight.execute(input as InferToolSchema<TSchema>, {
                         agentId: (input['agentId'] as string | undefined) ?? 'unknown',
                         sessionId: (input['sessionId'] as string | undefined) ?? 'unknown',
                     });
                 },
-                validate: (params: unknown): params is z.infer<TSchema> => {
+                validate: (params: unknown): params is InferToolSchema<TSchema> => {
                     return parameters.safeParse(params).success;
                 },
             };
@@ -277,19 +314,19 @@ export function tool<TSchema extends ZodObject<ZodRawShape>, TOutput = unknown>(
 // ── Utility: Zod → JSON Schema (minimal for tool calling) ──────────────────
 
 function zodToJSONSchema(
-    schema: ZodObject<ZodRawShape>,
+    schema: ToolObjectSchemaLike<Record<string, unknown>>,
     opts: { name: string; description: string; strict: boolean },
 ): Record<string, unknown> {
-    const shape = schema.shape;
+    const shape = schema.shape ?? {};
     const properties: Record<string, unknown> = {};
     const required: string[] = [];
 
     for (const [key, value] of Object.entries(shape)) {
-        const zodType = value as ZodType;
+        const zodType = value as ToolSchemaLike<unknown>;
         properties[key] = zodTypeToJSON(zodType);
 
         // Check if required (not optional, not with default)
-        if (!zodType.isOptional() && !zodType.isNullable()) {
+        if (!zodType.isOptional?.() && !zodType.isNullable?.()) {
             required.push(key);
         }
     }
@@ -310,20 +347,18 @@ function zodToJSONSchema(
     };
 }
 
-function zodTypeToJSON(zodType: ZodType): Record<string, unknown> {
+function fallbackSchema(): ToolSchemaLike<unknown> {
+    return {
+        safeParse: (input) => ({ success: true, data: input }),
+    };
+}
+
+function zodTypeToJSON(zodType: ToolSchemaLike<unknown>): Record<string, unknown> {
     const desc = zodType.description;
     const base: Record<string, unknown> = {};
     if (desc) base['description'] = desc;
 
-    // Use _def for introspection (Zod internal, stable across v3/v4)
-    interface ZodInternalDef {
-        typeName: string;
-        type?: ZodType;
-        innerType?: ZodType;
-        values?: string[];
-        defaultValue?: () => unknown;
-    }
-    const def = (zodType as unknown as { _def?: ZodInternalDef })._def;
+    const def = zodType._def;
     if (!def) return { ...base, type: 'string' };
 
     const typeName = def.typeName;
@@ -336,18 +371,25 @@ function zodTypeToJSON(zodType: ZodType): Record<string, unknown> {
         case 'ZodBoolean':
             return { ...base, type: 'boolean' };
         case 'ZodArray':
-            return { ...base, type: 'array', items: zodTypeToJSON(def.type as ZodType) };
+            return {
+                ...base,
+                type: 'array',
+                items: zodTypeToJSON((def.type as ToolSchemaLike<unknown> | undefined) ?? fallbackSchema()),
+            };
         case 'ZodEnum':
             return { ...base, type: 'string', enum: def.values };
         case 'ZodOptional':
-            return zodTypeToJSON(def.innerType as ZodType);
+            return zodTypeToJSON((def.innerType as ToolSchemaLike<unknown> | undefined) ?? fallbackSchema());
         case 'ZodDefault':
-            return { ...zodTypeToJSON(def.innerType as ZodType), default: def.defaultValue?.() };
+            return {
+                ...zodTypeToJSON((def.innerType as ToolSchemaLike<unknown> | undefined) ?? fallbackSchema()),
+                default: typeof def.defaultValue === 'function' ? def.defaultValue() : def.defaultValue,
+            };
         case 'ZodObject': {
-            const shape = (zodType as ZodObject<ZodRawShape>).shape;
+            const shape = zodType.shape ?? {};
             const props: Record<string, unknown> = {};
             for (const [k, v] of Object.entries(shape)) {
-                props[k] = zodTypeToJSON(v as ZodType);
+                props[k] = zodTypeToJSON(v as ToolSchemaLike<unknown>);
             }
             return { ...base, type: 'object', properties: props };
         }
@@ -373,13 +415,13 @@ function zodTypeToJSON(zodType: ZodType): Record<string, unknown> {
  * ```
  */
 export function createTools<
-    T extends Record<string, Omit<ToolHelperConfig<ZodObject<ZodRawShape>>, 'name'>>,
+    T extends Record<string, Omit<ToolHelperConfig<ToolObjectSchemaLike<Record<string, unknown>>>, 'name'>>,
 >(
     defs: T,
 ): { [K in keyof T]: LightweightTool } {
     const result: Record<string, LightweightTool> = {};
     for (const [name, config] of Object.entries(defs)) {
-        result[name] = tool({ ...config, name } as ToolHelperConfig<ZodObject<ZodRawShape>>);
+        result[name] = tool({ ...config, name } as ToolHelperConfig<ToolObjectSchemaLike<Record<string, unknown>>>);
     }
     return result as { [K in keyof T]: LightweightTool };
 }
@@ -419,20 +461,20 @@ export function isLightweightTool(value: unknown): value is LightweightTool {
 
 // ── Fluent ToolBuilder ─────────────────────────────────────────────────────
 
-interface ToolBuilderState<TSchema extends ZodObject<ZodRawShape>, TOutput> {
+interface ToolBuilderState<TSchema extends ToolObjectSchemaLike<Record<string, unknown>>, TOutput> {
     name?: string;
     description?: string;
     parameters?: TSchema;
-    outputSchema?: ZodType<TOutput>;
-    execute?: (params: z.infer<TSchema>, context: SimpleToolContext) => Promise<TOutput> | TOutput;
-    needsApproval?: boolean | ((params: z.infer<TSchema>) => boolean | Promise<boolean>);
+    outputSchema?: ToolSchemaLike<TOutput>;
+    execute?: (params: InferToolSchema<TSchema>, context: SimpleToolContext) => Promise<TOutput> | TOutput;
+    needsApproval?: boolean | ((params: InferToolSchema<TSchema>) => boolean | Promise<boolean>);
     category?: ToolCategory;
     tags?: string[];
     timeoutMs?: number;
     strict?: boolean;
     onInputStart?: (toolName: string) => void;
     onInputDelta?: (toolName: string, delta: string) => void;
-    onInputAvailable?: (toolName: string, input: z.infer<TSchema>) => void;
+    onInputAvailable?: (toolName: string, input: InferToolSchema<TSchema>) => void;
     toModelOutput?: (output: TOutput) => unknown;
 }
 
@@ -466,7 +508,10 @@ interface ToolBuilderState<TSchema extends ZodObject<ZodRawShape>, TOutput> {
  * const myAgent = agent({ instructions: '...', tools: [searchTool.toFrameworkTool()] });
  * ```
  */
-export class ToolBuilder<TSchema extends ZodObject<ZodRawShape> = ZodObject<ZodRawShape>, TOutput = unknown> {
+export class ToolBuilder<
+    TSchema extends ToolObjectSchemaLike<Record<string, unknown>> = ToolObjectSchemaLike<Record<string, unknown>>,
+    TOutput = unknown,
+> {
     private state: ToolBuilderState<TSchema, TOutput> = {};
 
     /** Set tool name (used as function ID by LLM) */
@@ -482,25 +527,25 @@ export class ToolBuilder<TSchema extends ZodObject<ZodRawShape> = ZodObject<ZodR
     }
 
     /** Set Zod parameter schema — defines what the LLM passes to the tool */
-    parameters<S extends ZodObject<ZodRawShape>>(schema: S): ToolBuilder<S, TOutput> {
+    parameters<S extends ToolObjectSchemaLike<Record<string, unknown>>>(schema: S): ToolBuilder<S, TOutput> {
         (this as unknown as ToolBuilder<S, TOutput>).state.parameters = schema;
         return this as unknown as ToolBuilder<S, TOutput>;
     }
 
     /** Set optional Zod output validation schema */
-    output<O>(schema: ZodType<O>): ToolBuilder<TSchema, O> {
+    output<O>(schema: ToolSchemaLike<O>): ToolBuilder<TSchema, O> {
         (this as unknown as ToolBuilder<TSchema, O>).state.outputSchema = schema;
         return this as unknown as ToolBuilder<TSchema, O>;
     }
 
     /** Set the execute function */
-    execute(fn: (params: z.infer<TSchema>, context: SimpleToolContext) => Promise<TOutput> | TOutput): this {
+    execute(fn: (params: InferToolSchema<TSchema>, context: SimpleToolContext) => Promise<TOutput> | TOutput): this {
         this.state.execute = fn;
         return this;
     }
 
     /** Require human approval before this tool runs */
-    approval(condition: boolean | ((params: z.infer<TSchema>) => boolean | Promise<boolean>) = true): this {
+    approval(condition: boolean | ((params: InferToolSchema<TSchema>) => boolean | Promise<boolean>) = true): this {
         this.state.needsApproval = condition;
         return this;
     }
@@ -548,7 +593,7 @@ export class ToolBuilder<TSchema extends ZodObject<ZodRawShape> = ZodObject<ZodR
     }
 
     /** Hook called when full streaming input is available */
-    onReady(fn: (toolName: string, input: z.infer<TSchema>) => void): this {
+    onReady(fn: (toolName: string, input: InferToolSchema<TSchema>) => void): this {
         this.state.onInputAvailable = fn;
         return this;
     }
@@ -645,7 +690,7 @@ export type ToolWrapMiddleware<TIn = unknown, TOut = unknown> = (
 /**
  * Options for `extendTool()`.
  */
-export interface ExtendToolOptions<TSchema extends ZodObject<ZodRawShape>, TOutput> {
+export interface ExtendToolOptions<TSchema extends ToolObjectSchemaLike<Record<string, unknown>>, TOutput> {
     /** Override or append to the tool description. */
     description?: string;
     /** Override tool name. */
@@ -658,29 +703,29 @@ export interface ExtendToolOptions<TSchema extends ZodObject<ZodRawShape>, TOutp
      * Transform parameters BEFORE the original execute runs.
      * Useful for injecting defaults, normalizing input, or adding context.
      */
-    transformInput?: (params: z.infer<TSchema>, ctx: SimpleToolContext) => z.infer<TSchema> | Promise<z.infer<TSchema>>;
+    transformInput?: (params: InferToolSchema<TSchema>, ctx: SimpleToolContext) => InferToolSchema<TSchema> | Promise<InferToolSchema<TSchema>>;
     /**
      * Transform the output AFTER the original execute runs.
      * Useful for formatting, enriching, or filtering results.
      */
-    transformOutput?: (output: TOutput, params: z.infer<TSchema>, ctx: SimpleToolContext) => TOutput | Promise<TOutput>;
+    transformOutput?: (output: TOutput, params: InferToolSchema<TSchema>, ctx: SimpleToolContext) => TOutput | Promise<TOutput>;
     /**
      * Run before the tool executes. Return false to cancel execution.
      * Perfect for rate limiting, logging, auth checks.
      */
-    beforeExecute?: (params: z.infer<TSchema>, ctx: SimpleToolContext) => Promise<false | undefined> | false | undefined;
+    beforeExecute?: (params: InferToolSchema<TSchema>, ctx: SimpleToolContext) => Promise<false | undefined> | false | undefined;
     /**
      * Run after the tool executes.
      * Perfect for logging results, caching, analytics.
      */
-    afterExecute?: (output: TOutput, params: z.infer<TSchema>, ctx: SimpleToolContext) => Promise<void> | void;
+    afterExecute?: (output: TOutput, params: InferToolSchema<TSchema>, ctx: SimpleToolContext) => Promise<void> | void;
     /**
      * Handle errors thrown during execution.
      * Return a fallback value, or re-throw to propagate.
      */
-    onError?: (error: Error, params: z.infer<TSchema>, ctx: SimpleToolContext) => TOutput | Promise<TOutput>;
+    onError?: (error: Error, params: InferToolSchema<TSchema>, ctx: SimpleToolContext) => TOutput | Promise<TOutput>;
     /** Override the approval requirement. */
-    needsApproval?: boolean | ((params: z.infer<TSchema>) => boolean | Promise<boolean>);
+    needsApproval?: boolean | ((params: InferToolSchema<TSchema>) => boolean | Promise<boolean>);
     /** Override timeout in ms. */
     timeoutMs?: number;
 }
@@ -706,11 +751,11 @@ export interface ExtendToolOptions<TSchema extends ZodObject<ZodRawShape>, TOutp
  * });
  * ```
  */
-export function extendTool<TSchema extends ZodObject<ZodRawShape>, TOutput>(
+export function extendTool<TSchema extends ToolObjectSchemaLike<Record<string, unknown>>, TOutput>(
     base: LightweightTool<TSchema, TOutput>,
     options: ExtendToolOptions<TSchema, TOutput>
 ): LightweightTool<TSchema, TOutput> {
-    const wrappedExecute = async (params: z.infer<TSchema>, context: SimpleToolContext): Promise<TOutput> => {
+    const wrappedExecute = async (params: InferToolSchema<TSchema>, context: SimpleToolContext): Promise<TOutput> => {
         if (options.beforeExecute) {
             const result = await options.beforeExecute(params, context);
             if (result === false) {
@@ -789,20 +834,20 @@ export function extendTool<TSchema extends ZodObject<ZodRawShape>, TOutput>(
  * ]);
  * ```
  */
-export function wrapTool<TSchema extends ZodObject<ZodRawShape>, TOutput>(
+export function wrapTool<TSchema extends ToolObjectSchemaLike<Record<string, unknown>>, TOutput>(
     base: LightweightTool<TSchema, TOutput>,
-    middlewares: ToolWrapMiddleware<z.infer<TSchema>, TOutput>[],
+    middlewares: ToolWrapMiddleware<InferToolSchema<TSchema>, TOutput>[],
     overrides: { name?: string; description?: string; tags?: string[] } = {}
 ): LightweightTool<TSchema, TOutput> {
     if (middlewares.length === 0) return base;
 
     // Unwrap ToolResult so middlewares work with plain TOutput
-    const baseExecute = async (params: z.infer<TSchema>, ctx: SimpleToolContext): Promise<TOutput> => {
+    const baseExecute = async (params: InferToolSchema<TSchema>, ctx: SimpleToolContext): Promise<TOutput> => {
         const result = await base.execute(params, ctx);
         if (!result.success) throw new Error(result.error?.message ?? 'Tool execution failed');
         return result.data as TOutput;
     };
-    const chain = middlewares.reduceRight<(params: z.infer<TSchema>, ctx: SimpleToolContext) => Promise<TOutput>>(
+    const chain = middlewares.reduceRight<(params: InferToolSchema<TSchema>, ctx: SimpleToolContext) => Promise<TOutput>>(
         (next, mw) => (params, ctx) => mw(params, ctx, next),
         baseExecute
     );
@@ -831,16 +876,16 @@ export function wrapTool<TSchema extends ZodObject<ZodRawShape>, TOutput>(
  * ```
  */
 export function pipeTools<
-    TSchema extends ZodObject<ZodRawShape>,
+    TSchema extends ToolObjectSchemaLike<Record<string, unknown>>,
     TMid,
     TOutput,
 >(
     first: LightweightTool<TSchema, TMid>,
-    second: LightweightTool<ZodObject<ZodRawShape>, TOutput>,
+    second: LightweightTool<ToolObjectSchemaLike<Record<string, unknown>>, TOutput>,
     options: {
         name: string;
         description: string;
-        adapter: (firstOutput: TMid, originalParams: z.infer<TSchema>) => Record<string, unknown>;
+        adapter: (firstOutput: TMid, originalParams: InferToolSchema<TSchema>) => Record<string, unknown>;
         tags?: string[];
     }
 ): LightweightTool<TSchema, TOutput> {
@@ -870,7 +915,7 @@ export function pipeTools<
  * });
  * ```
  */
-export function versionTool<TSchema extends ZodObject<ZodRawShape>, TOutput>(
+export function versionTool<TSchema extends ToolObjectSchemaLike<Record<string, unknown>>, TOutput>(
     base: LightweightTool<TSchema, TOutput>,
     version: string,
     options: { changelog?: string; deprecated?: boolean; replacedBy?: string } = {}

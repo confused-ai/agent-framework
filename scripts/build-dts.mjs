@@ -18,6 +18,7 @@ const tsconfig = resolve(root, 'tsconfig.build.json');
 const entries = [
   // ── Root flat files ───────────────────────────────────────────────────────
   ['src/index.ts',          'dist/index.d.ts'],
+  ['src/lite.ts',           'dist/lite.d.ts'],
   ['src/model.ts',          'dist/model.d.ts'],
   ['src/tool.ts',           'dist/tool.d.ts'],
   ['src/workflow.ts',       'dist/workflow.d.ts'],

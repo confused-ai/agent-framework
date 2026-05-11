@@ -62,6 +62,16 @@ export interface RoleDefinition {
   retry?: AgenticRetryPolicy;
   /** Lifecycle hooks. */
   hooks?: AgenticLifecycleHooks;
+  /**
+   * Allow this agent to delegate sub-tasks to peer agents mid-run.
+   *
+   * When `true`, the team injects each peer agent as a callable tool
+   * (`delegate_to_<name>`) so this agent can autonomously hand off work
+   * without the team runner needing to orchestrate it manually.
+   *
+   * @default false
+   */
+  allowDelegation?: boolean;
 }
 
 /** A role-based agent with a `.run()` method and `.systemPrompt` string. */
@@ -70,6 +80,8 @@ export interface RoleAgent {
   readonly name: string;
   /** Generated system prompt (role + backstory + goal). */
   readonly systemPrompt: string;
+  /** Original definition, including `allowDelegation`. */
+  readonly definition: RoleDefinition;
   /**
    * Run the agent with an input prompt.
    * Throws if `llm` was not provided to `defineRole`.
@@ -122,10 +134,11 @@ export function defineRole(def: RoleDefinition): RoleAgent {
           `Supply an llm to defineRole, or pass this role to createTeam which provides one.`,
         );
       }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       _agent = createAgenticAgent({
         name: def.role,
         instructions: systemPrompt,
-        llm: def.llm,
+        llm: def.llm as LLMProvider,
         tools: def.tools ?? [],
         maxSteps: def.maxSteps,
         timeoutMs: def.timeoutMs,
@@ -139,6 +152,7 @@ export function defineRole(def: RoleDefinition): RoleAgent {
   return {
     name: def.role,
     systemPrompt,
+    definition: def,
     run(config, hooks) {
       return getAgent().run(
         {
@@ -149,4 +163,46 @@ export function defineRole(def: RoleDefinition): RoleAgent {
       );
     },
   };
+}
+
+// ── Delegation tools ──────────────────────────────────────────────────────────
+
+/**
+ * Build a `ToolProvider`-compatible array that wraps each peer agent as a
+ * callable delegation tool.
+ *
+ * Each tool is named `delegate_to_<agent_name>` (lowercased, spaces → `_`).
+ * When the LLM calls the tool it receives the delegated agent's text output.
+ *
+ * This is called by `createTeam` for every agent that has `allowDelegation: true`.
+ */
+export function buildDelegationTools(
+  peers: RoleAgent[],
+): Array<{
+  name: string;
+  description: string;
+  parameters: { type: 'object'; properties: Record<string, unknown>; required: string[] };
+  execute: (args: { task: string }) => Promise<string>;
+}> {
+  return peers.map((peer) => {
+    const toolName = `delegate_to_${peer.name.toLowerCase().replace(/\s+/g, '_')}`;
+    return {
+      name: toolName,
+      description: `Delegate a sub-task to the ${peer.name} agent. Use when the task requires ${peer.name}'s specific expertise. Provide a clear, self-contained task description.`,
+      parameters: {
+        type: 'object' as const,
+        properties: {
+          task: {
+            type: 'string',
+            description: `Detailed description of the sub-task for the ${peer.name} agent.`,
+          },
+        },
+        required: ['task'],
+      },
+      async execute(args: { task: string }): Promise<string> {
+        const result = await peer.run({ prompt: args.task });
+        return result.text;
+      },
+    };
+  });
 }

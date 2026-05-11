@@ -1,1 +1,1 @@
-export * from '@confused-ai/tools';
+export * from '@confused-ai/tools/memory';

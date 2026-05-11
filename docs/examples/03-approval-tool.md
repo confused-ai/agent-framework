@@ -1,132 +1,74 @@
-# 03 · Tool with Approval 🟢
+# 03 · Tool with Approval
 
-Some actions are risky — sending emails, deleting files, making purchases.
-The approval pattern pauses execution and asks a human "are you sure?"
-before the tool runs.
+Some tools should not run immediately. The current approval flow is built around `needsApproval` on the tool and an `approvalStore` on the HTTP runtime.
 
 ## What you'll learn
 
-- How to require human approval before a tool executes
-- How to implement a custom approval handler
-- When to use this pattern (irreversible or expensive actions)
+- How to mark a tool as approval-gated
+- How to expose approval requests through the HTTP runtime
+- How to keep risky actions out of the default fast path
 
-## Code
+## Current pattern
 
 ```ts
-// approval-agent.ts
-import { z } from 'zod';
+import { z } from 'zod/v3';
 import { createAgent, tool } from 'confused-ai';
-import * as readline from 'node:readline/promises';
+import { createHttpService, listenService } from 'confused-ai/serve';
+import { createSqliteApprovalStore } from 'confused-ai/production';
 
-// ── Approval helper ────────────────────────────────────────────────────────
-async function askHuman(question: string): Promise<boolean> {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const answer = await rl.question(`\n⚠️  ${question}\nApprove? (yes/no): `);
-  rl.close();
-  return answer.toLowerCase().startsWith('y');
-}
-
-// ── Tool that requires approval ────────────────────────────────────────────
 const sendEmail = tool({
-  name: 'sendEmail',
-  description: 'Send an email to a recipient. Always requires human approval.',
+  name: 'send_email',
+  description: 'Send an email to a recipient.',
   parameters: z.object({
-    to:      z.string().email().describe('Recipient email address'),
-    subject: z.string().describe('Email subject line'),
-    body:    z.string().describe('Email body text'),
-  }),
-
-  // needsApproval = true → pause before execute()
-  needsApproval: true,
-
-  execute: async ({ to, subject, body }) => {
-    // In a real app: call your email service (SendGrid, SES, etc.)
-    console.log(`\n📧 Email sent to ${to}`);
-    return { success: true, messageId: `msg_${Date.now()}` };
-  },
-});
-
-// ── Dynamic approval — only ask for external domains ──────────────────────
-const sendEmailSmart = tool({
-  name: 'sendEmailSmart',
-  description: 'Send email — asks approval only for external addresses.',
-  parameters: z.object({
-    to:      z.string().email(),
+    to: z.string().email(),
     subject: z.string(),
-    body:    z.string(),
+    body: z.string(),
   }),
-
-  // Approval only when sending outside your company
-  needsApproval: ({ to }) => !to.endsWith('@mycompany.com'),
-
-  execute: async ({ to, subject, body }) => {
-    console.log(`📧 Sent to ${to}: ${subject}`);
+  needsApproval: true,
+  execute: async ({ to, subject }) => {
+    console.log(`sending email to ${to}: ${subject}`);
     return { success: true };
   },
 });
 
-// ── Agent ──────────────────────────────────────────────────────────────────
-const agent = createAgent({
+const emailAgent = createAgent({
   name: 'email-agent',
   model: 'gpt-4o-mini',
-  instructions: 'You help draft and send emails. Always confirm before sending.',
+  instructions: 'Draft helpful email responses and use send_email only when required.',
   tools: [sendEmail],
-
-  // Wire up the approval handler
-  onToolApprovalRequired: async ({ toolName, params }) => {
-    const paramsStr = JSON.stringify(params, null, 2);
-    const approved = await askHuman(
-      `Agent wants to call "${toolName}" with:\n${paramsStr}`
-    );
-    return { approved };
-  },
 });
 
-// ── Run ────────────────────────────────────────────────────────────────────
-const result = await agent.run(
-  'Send a quick email to bob@example.com saying the meeting is moved to 3pm.'
-);
-console.log(result.text);
-```
+const approvalStore = createSqliteApprovalStore('./agent.db');
 
-## Terminal interaction
-
-```
-⚠️  Agent wants to call "sendEmail" with:
-{
-  "to": "bob@example.com",
-  "subject": "Meeting Rescheduled",
-  "body": "Hi Bob, just a heads up that the meeting has been moved to 3pm."
-}
-Approve? (yes/no): yes
-
-📧 Email sent to bob@example.com
-"I've sent Bob the email about the rescheduled meeting."
-```
-
-## Skip approval in tests
-
-```ts
-// In your test suite — auto-approve everything
-const testAgent = createAgent({
-  ...agentConfig,
-  onToolApprovalRequired: async () => ({ approved: true }),
+const service = createHttpService({
+  agents: { email: emailAgent },
+  approvalStore,
+  cors: '*',
 });
+
+await listenService(service, 3000);
 ```
 
-## Auto-deny dangerous patterns
+## What happens at runtime
+
+1. The model decides it needs the `send_email` tool.
+2. Because `needsApproval` is enabled, the runtime creates a pending approval request.
+3. The request is stored in the configured `approvalStore`.
+4. The HTTP runtime exposes approval endpoints so another process or UI can review and approve the action.
+
+When `approvalStore` is enabled, the runtime exposes pending approvals under the built-in `/v1/approvals` routes.
+
+## Dynamic approval rules
+
+You can gate only certain calls:
 
 ```ts
-onToolApprovalRequired: async ({ toolName, params }) => {
-  // Automatically block bulk operations
-  if (params.recipients?.length > 10) {
-    console.warn('Blocked: bulk email not allowed');
-    return { approved: false, reason: 'Bulk email requires manual review' };
-  }
-  return askHuman(`Allow ${toolName}?`);
-},
+needsApproval: ({ to }) => !to.endsWith('@mycompany.com'),
 ```
+
+That pattern is useful when internal actions should flow through immediately but external actions need review.
 
 ## What's next?
 
-- [04 · Extend & Wrap Tools](./04-extend-tools) — add middleware to any tool
+- [04 · Extend & Wrap Tools](./04-extend-tools)
+- [13 · Production Resilience](./13-production)

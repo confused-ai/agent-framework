@@ -1,199 +1,49 @@
 ---
-title: Creating Agents
-description: All options for creating agents — model, tools, sessions, guardrails, budget, streaming, and more.
+title: Agents
+description: Understand the main agent authoring surfaces and how to grow from a simple agent to a production-shaped runtime.
 outline: [2, 3]
 ---
 
-# Creating Agents
+# Agents
 
-The `agent()` function is the primary way to create agents.
+Agents are the center of the framework. They own instructions, model selection, tool access, and the runtime behavior that turns a prompt into a result.
 
-## Basic usage
+## Which surface to start with
 
-```ts
-import { agent } from 'confused-ai';
+For most new code, start with the standard agent authoring path. Move to more explicit surfaces only when the boundary or execution model needs tighter control.
 
-const ai = agent({
-  model: 'gpt-4o',
-  systemPrompt: 'You are a helpful assistant.',
-});
+The practical rule is:
 
-const result = await ai.run({ prompt: 'Hello!' });
-console.log(result.output); // "Hello! How can I help?"
-```
+- use `agent()` or `createAgent()` for the normal path
+- use typed builders when the input and output contract matters
+- use lower-level surfaces such as `bare()` only when you need direct execution control
 
-## Full options reference
+## What belongs in an agent
 
-```ts
-import { agent } from 'confused-ai';
+An agent should describe:
 
-const ai = agent({
-  // ── Identity ─────────────────────────────────────────────────────
-  name: 'MyAgent',                    // agent name (used in logs/traces)
-  systemPrompt: 'You are...',         // base instructions to the LLM
+- the job it is responsible for
+- the model or provider it uses
+- the tools it can call
+- the runtime features it needs, such as sessions, knowledge, or guardrails
 
-  // ── LLM provider ──────────────────────────────────────────────────
-  model: 'gpt-4o',                    // shorthand — auto-detects provider
-  // or pass a provider instance:
-  // llmProvider: new OpenAIProvider({ apiKey: '...', model: 'gpt-4o' }),
+An agent should not try to hide the entire application architecture inside one configuration object. Keep the responsibility clear.
 
-  // ── Tools ─────────────────────────────────────────────────────────
-  tools: [myTool, anotherTool],       // array of Tool instances
-  // tools: 'web',                    // preset: HTTP + browser tools
+## Recommended build path
 
-  // ── Session ───────────────────────────────────────────────────────
-  sessionStore: store,                // InMemorySessionStore | SqliteSessionStore | RedisSessionStore
+1. Start with one small agent and clear instructions.
+2. Validate the base response behavior.
+3. Add one tool or one context layer only when needed.
+4. Add resilience, serving, or orchestration after the basic shape has proven itself.
 
-  // ── Execution limits ──────────────────────────────────────────────
-  maxSteps: 10,                       // max ReAct iterations (default: 10)
-  timeoutMs: 60_000,                  // run timeout in ms (default: 60s)
+## Good agent boundaries
 
-  // ── Guardrails ────────────────────────────────────────────────────
-  guardrails: validator,              // GuardrailValidator instance
+The best agent boundaries are task-based, not vague. “Answer support questions from policy” is a better boundary than “do everything for support.”
 
-  // ── Budget ────────────────────────────────────────────────────────
-  budget: {
-    maxCostUsd: 0.10,                 // hard stop at $0.10 per run
-    maxTokens: 50_000,                // hard stop at 50k tokens
-  },
+That clarity matters even more when you later introduce teams or supervisors, because each agent should have a reason to exist separately.
 
-  // ── HITL (human-in-the-loop) ──────────────────────────────────────
-  humanInTheLoop: {
-    beforeToolCall: async (tool, args) => {
-      if (tool.id === 'send_email') return await askUser('Allow?');
-      return { approved: true };
-    },
-  },
+## Where to go next
 
-  // ── Lifecycle hooks ───────────────────────────────────────────────
-  hooks: {
-    beforeRun:      async (ctx) => { /* ... */ },
-    afterRun:       async (result) => { /* ... */ },
-    beforeToolCall: async (tool, args) => { /* ... */ },
-    afterToolCall:  async (tool, result) => { /* ... */ },
-    onError:        async (err) => { /* ... */ },
-  },
-
-  // ── Knowledge base (RAG) ──────────────────────────────────────────
-  knowledgebase: ragEngine,           // auto-retrieves context each run
-
-  // ── Reasoning ─────────────────────────────────────────────────────
-  reasoning: {
-    enabled: true,
-    strategy: 'cot',                  // 'cot' | 'tot' | 'react'
-    maxSteps: 5,
-  },
-});
-```
-
-## Running an agent
-
-### `run()` — single response
-
-```ts
-const result = await ai.run({
-  prompt: 'Summarise this article: ...',
-  sessionId: 'user-123',             // optional: ties to a session
-  userId: 'user-123',                // optional: budget tracking per user
-  runId: 'run-abc',                  // optional: idempotency key
-  maxSteps: 5,                       // override per run
-  timeoutMs: 30_000,                 // override per run
-});
-
-console.log(result.output);          // final text response
-console.log(result.steps);           // number of ReAct iterations
-console.log(result.usage);           // { promptTokens, completionTokens, totalTokens }
-console.log(result.finishReason);    // 'stop' | 'max_steps' | 'timeout' | 'error'
-```
-
-### `stream()` — streaming tokens
-
-```ts
-for await (const chunk of ai.stream({ prompt: 'Write a poem' })) {
-  process.stdout.write(chunk);
-}
-```
-
-### `resume()` — continue from checkpoint
-
-```ts
-// Resume a previous run (requires checkpointStore configured)
-const result = await ai.resume('session-id-here');
-```
-
-## Structured output
-
-Return a validated JSON object instead of text:
-
-```ts
-import { z } from 'zod';
-
-const SentimentSchema = z.object({
-  sentiment: z.enum(['positive', 'negative', 'neutral']),
-  score: z.number().min(-1).max(1),
-  summary: z.string(),
-});
-
-const result = await ai.run({
-  prompt: 'Analyse the sentiment of: "This product is amazing!"',
-  responseModel: SentimentSchema,
-});
-
-console.log(result.structuredOutput);
-// { sentiment: 'positive', score: 0.95, summary: 'Very positive review' }
-```
-
-## Using `defineAgent()` (fluent builder)
-
-The SDK package provides a fluent builder for reusable agent definitions:
-
-```ts
-import { defineAgent } from '@confused-ai/sdk';
-
-const researchAgent = defineAgent({
-  name: 'Researcher',
-  instructions: 'Research topics thoroughly and return structured findings.',
-  model: 'gpt-4o',
-})
-  .tools([webSearchTool, scraperTool])
-  .budget({ maxCostUsd: 0.50 })
-  .checkpoint({ store: checkpointStore });
-
-// DefinedAgent has the same .run() / .stream() interface
-const result = await researchAgent.run({ prompt: 'Latest TypeScript 5.5 features' });
-```
-
-## Skills
-
-Skills bundle instructions + tools into reusable capability packs:
-
-```ts
-import { agent } from 'confused-ai';
-import { webResearchSkill, codeReviewerSkill } from '@confused-ai/skills';
-
-const ai = agent({
-  model: 'gpt-4o',
-  skills: [webResearchSkill, codeReviewerSkill],
-});
-```
-
-Built-in skills:
-- `webResearchSkill` — Tavily search + URL scraping
-- `pdfSummarizerSkill` — PDF loading + summarisation
-- `codeReviewerSkill` — file reading + security analysis
-
-## Serving an agent as HTTP API
-
-```ts
-import { serve } from 'confused-ai';
-
-await serve(ai, { port: 3000 });
-```
-
-Endpoints created:
-- `POST /v1/run` — `{ prompt, sessionId?, userId?, runId? }` → `AgenticRunResult`
-- `POST /v1/stream` — SSE streaming response
-- `GET  /v1/health` — health check
-- `GET  /v1/openapi.json` — OpenAPI 3.1 spec
-- `GET  /v1/approvals` — pending HITL approvals
-- `POST /v1/approvals/:id` — submit HITL decision
+- Read the API agent page for the exact authoring surfaces.
+- Read `tools.md` when the agent needs system access.
+- Read `session.md` and `memory.md` when continuity becomes important.

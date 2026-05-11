@@ -1,129 +1,79 @@
 ---
-title: "02 · First Custom Tool 🟢"
+title: "02 · First Custom Tool"
 ---
 
-# 02 · First Custom Tool 🟢
+# 02 · First Custom Tool
 
-Give your agent the ability to fetch live weather data. This is the core pattern
-for connecting agents to any external API, database, or service.
+Give your agent a single focused capability. This is the baseline pattern for connecting the framework to any external API, database, or internal service.
 
 ## What you'll learn
 
-- How to create a tool with `tool()`
-- How to define input parameters with Zod
-- How to attach tools to an agent
-- How the agent decides when to call a tool
+- How to define a tool with `tool()`
+- How to describe tool inputs with Zod
+- How to attach the tool directly to an agent
+- How the agent decides when to call the tool
 
-## Code
+## Current pattern
+
+The current tools layer is typed against Zod v3 compatibility types. When you author custom tools, import `z` from `zod/v3`.
 
 ```ts
-// weather-agent.ts
-import { z } from 'zod';
-import { createAgent, tool } from 'confused-ai';
+import { z } from 'zod/v3';
+import { agent, tool } from 'confused-ai';
 
-// ── 1. Define the tool ─────────────────────────────────────────────────────
 const getWeather = tool({
-  name: 'getWeather',
-  description: 'Get the current weather for a city. Use this when the user asks about weather.',
-  
-  // Zod schema = what the AI must provide to call this tool
+  name: 'get_weather',
+  description: 'Return the current weather for a city.',
   parameters: z.object({
-    city:    z.string().describe('The city name, e.g. "London"'),
-    country: z.string().optional().describe('ISO country code, e.g. "GB"'),
+    city: z.string().describe('The city name, for example Tokyo'),
   }),
-
-  // execute() runs when the AI calls the tool
-  execute: async ({ city, country }) => {
-    // In a real app, call a weather API like OpenWeatherMap
-    // For this example we simulate a response
-    const location = country ? `${city}, ${country}` : city;
-    return {
-      location,
-      temperature: 22,
-      unit: 'Celsius',
-      condition: 'Partly cloudy',
-      humidity: 65,
+  execute: async ({ city }) => {
+    const conditions: Record<string, string> = {
+      Paris: 'Partly cloudy, 18°C',
+      London: 'Overcast, 12°C',
+      Tokyo: 'Sunny, 24°C',
     };
+
+    return conditions[city] ?? `No weather data for ${city}`;
   },
 });
 
-// ── 2. Create the agent ────────────────────────────────────────────────────
-const agent = createAgent({
-  name: 'weather-agent',
-  model: 'gpt-4o-mini',
-  instructions: `
-    You are a helpful weather assistant.
-    Always use the getWeather tool when the user asks about weather.
-    Report temperatures in Celsius.
-  `,
-  tools: [getWeather],  // ✅ pass tool() results directly — no .toFrameworkTool() needed
+const bot = agent({
+  name: 'WeatherBot',
+  instructions: 'You are a weather assistant. Use the get_weather tool to answer weather questions.',
+  tools: [getWeather],
+  sessionStore: false,
+  guardrails: false,
 });
 
-// ── 3. Ask about the weather ───────────────────────────────────────────────
-const result = await agent.run("What's the weather like in Tokyo right now?");
+const result = await bot.run('What is the weather in Tokyo?');
 console.log(result.text);
-// → "The weather in Tokyo is currently 22°C and partly cloudy with 65% humidity."
+console.log(`finish=${result.finishReason} steps=${result.steps}`);
 ```
 
 ## How it works
 
-```
-User: "What's the weather in Tokyo?"
-       ↓
-  Agent decides: "I need to call getWeather"
-       ↓
-  Tool runs → returns { temperature: 22, condition: 'Partly cloudy', ... }
-       ↓
-  Agent formats the data into a human-readable reply
-       ↓
-User: "The weather in Tokyo is currently 22°C..."
-```
+1. The model sees `get_weather` in the available tool list.
+2. When the user asks a weather question, the agent can call that tool.
+3. The tool returns structured data.
+4. The agent turns that result into a normal language response.
 
-## Connect a real weather API
+## Real API call
+
+You can replace the stubbed `execute()` body with a real request:
 
 ```ts
-execute: async ({ city, country }) => {
+execute: async ({ city }) => {
   const apiKey = process.env.OPENWEATHER_API_KEY;
-  const query = country ? `${city},${country}` : city;
   const res = await fetch(
-    `https://api.openweathermap.org/data/2.5/weather?q=${query}&appid=${apiKey}&units=metric`
+    `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`,
   );
   const data = await res.json();
-  return {
-    location: data.name,
-    temperature: data.main.temp,
-    condition: data.weather[0].description,
-    humidity: data.main.humidity,
-  };
+  return `${data.name}: ${data.main.temp}°C, ${data.weather[0].description}`;
 },
-```
-
-## Multiple tools
-
-Agents can have many tools. The AI picks the right one automatically:
-
-```ts
-const agent = createAgent({
-  tools: [getWeather, getTime, getNews],
-});
-```
-
-## Fluent builder style
-
-Prefer a more structured API? Use `defineTool()`:
-
-```ts
-import { defineTool } from 'confused-ai';
-
-const getWeather = defineTool()
-  .name('getWeather')
-  .description('Get current weather for a city')
-  .parameters(z.object({ city: z.string() }))
-  .execute(async ({ city }) => ({ city, temp: 22 }))
-  .build();
 ```
 
 ## What's next?
 
-- [03 · Tool with Approval](./03-approval-tool) — require human confirmation before executing
-- [04 · Extend & Wrap Tools](./04-extend-tools) — add logging, caching, auth to any tool
+- [03 · Tool with Approval](./03-approval-tool)
+- [04 · Extend & Wrap Tools](./04-extend-tools)

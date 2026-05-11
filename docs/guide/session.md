@@ -1,123 +1,47 @@
 ---
-title: Session Management
-description: Persist conversation history across runs with SQLite, Redis, or Postgres session stores.
+title: Sessions
+description: Keep conversations continuous across runs and choose the right moment to add session persistence to an agent workflow.
 outline: [2, 3]
 ---
 
-# Session Management
+# Sessions
 
-Sessions give agents memory across multiple `run()` calls. Pass a `sessionId` to tie runs to a conversation thread. The session store persists messages so they survive process restarts.
+Sessions are the continuity layer for conversational systems. They let an agent recognize that multiple runs belong to the same ongoing interaction instead of treating every prompt as a brand-new request.
 
-## In-memory (development)
+## When sessions matter
 
-No configuration needed — sessions exist only for the process lifetime:
+Add sessions when the agent needs to remember the flow of a conversation across turns, such as:
 
-```ts
-import { agent } from 'confused-ai';
-import { InMemorySessionStore } from 'confused-ai/session';
+- chat interfaces
+- support flows that span several steps
+- review or approval loops that resume later
+- systems where the user expects the agent to know what just happened
 
-const ai = agent({
-  model: 'gpt-4o',
-  sessionStore: new InMemorySessionStore(),
-});
+If every request is independent, you may not need sessions at all.
 
-await ai.run({ prompt: 'My name is Alice', sessionId: 'alice' });
-const r = await ai.run({ prompt: 'What is my name?', sessionId: 'alice' });
-// → "Your name is Alice."
-```
+## What sessions are responsible for
 
-## SQLite (zero dependencies)
+Sessions track conversation continuity. They are not the same as retrieval, memory, or generic storage.
 
-Persists to a local file. No external database required:
+- sessions preserve the thread of the interaction
+- memory preserves selected facts or history beyond a single conversation shape
+- knowledge provides retrieval-backed source material
+- storage handles broader application state
 
-```ts
-import { createSqliteStore } from 'confused-ai/session';
+Keeping those boundaries clear makes the runtime much easier to reason about.
 
-const sessions = createSqliteStore('./sessions.db');
+## Recommended rollout
 
-const ai = agent({
-  model: 'gpt-4o',
-  sessionStore: sessions,
-});
-```
+1. Start with an in-memory session store while the conversation design is still changing.
+2. Decide how session identifiers are created and passed through the application.
+3. Add persistence only after the continuity model is behaving the way you expect.
+4. Make sure session identifiers are easy to inspect during debugging.
 
-Session data survives process restarts automatically.
+## Design guideline
 
-## Redis
+Treat the session boundary as part of the user experience. If the session model is vague, the conversation will feel inconsistent even when the agent itself is otherwise good.
 
-For distributed deployments where multiple instances share sessions:
+## Where to go next
 
-```ts
-import { createRedisStore } from 'confused-ai/session';
-
-const sessions = createRedisStore({
-  url: process.env.REDIS_URL!,
-  keyPrefix: 'agent:session:',
-  ttlSeconds: 86_400,  // sessions expire after 24 hours
-});
-```
-
-## Database-backed (Postgres / SQLite via AgentDb)
-
-```ts
-import { createDbSessionStore } from 'confused-ai/session';
-import { createAgentDb }       from 'confused-ai/db';
-
-const db = createAgentDb({ connectionString: process.env.DATABASE_URL! });
-const sessions = createDbSessionStore({ db });
-```
-
-## Fallback (primary + hot-standby)
-
-Automatically falls back to the secondary store if the primary fails:
-
-```ts
-import { createFallbackSessionStore } from 'confused-ai/session';
-
-const sessions = createFallbackSessionStore({
-  primary:   redisStore,
-  secondary: sqliteStore,
-});
-```
-
-## Session options
-
-```ts
-import { InMemorySessionStore } from 'confused-ai/session';
-
-const sessions = new InMemorySessionStore();
-// options are passed to the constructor:
-// new InMemorySessionStore({ maxMessages: 100 })
-```
-
-## Working with sessions directly
-
-```ts
-// List all sessions
-const allSessions = await sessions.list();
-
-// Get a specific session
-const session = await sessions.get('user-123');
-console.log(session.messages);
-
-// Delete a session
-await sessions.delete('user-123');
-
-// Clear all sessions
-await sessions.clear();
-```
-
-## Multi-tenant sessions
-
-Scope sessions to a tenant to avoid cross-tenant data access:
-
-```ts
-import { tenantScopedKey } from 'confused-ai/contracts';
-
-const sessionId = tenantScopedKey('tenant-abc', 'user-123');
-// → 'tenant-abc:user-123'
-
-await ai.run({ prompt: '...', sessionId });
-```
-
-Note: `:` characters are rejected in tenant/user IDs to prevent key injection.
+- Read `memory.md` if the system should retain facts beyond ordinary conversation flow.
+- Read `storage.md` if you also need durable application state around the agent.

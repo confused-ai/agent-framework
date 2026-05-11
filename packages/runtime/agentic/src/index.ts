@@ -48,8 +48,13 @@ export function createAgenticAgent(config: {
             maxSteps?: number;
             timeoutMs?: number;
             runId?: string;
+            traceId?: string;
             userId?: string;
+            signal?: AgenticRunConfig['signal'];
+            responseModel?: AgenticRunConfig['responseModel'];
             ragContext?: string;
+            hooks?: AgenticLifecycleHooks;
+            allowedTools?: string[];
         },
         hooks?: AgenticStreamHooks,
     ): Promise<AgenticRunResult>;
@@ -85,7 +90,12 @@ export function createAgenticAgent(config: {
                 maxSteps: runConfig.maxSteps,
                 timeoutMs: runConfig.timeoutMs,
                 ragContext: runConfig.ragContext,
+                signal: runConfig.signal,
+                responseModel: runConfig.responseModel,
+                hooks: runConfig.hooks,
+                allowedTools: runConfig.allowedTools,
                 ...(runConfig.runId && { runId: runConfig.runId }),
+                ...(runConfig.traceId && { traceId: runConfig.traceId }),
                 ...(runConfig.userId && { userId: runConfig.userId }),
             };
             return runner.run(cfg, hooks);

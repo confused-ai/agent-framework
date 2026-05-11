@@ -21,11 +21,60 @@ import type { UserProfileStore } from '@confused-ai/learning';
 import type { LearningMode } from '@confused-ai/learning';
 import type { MemoryStore } from '@confused-ai/memory';
 import type { RAGEngine } from '@confused-ai/knowledge';
+import type { Storage } from '@confused-ai/storage';
 import type { z } from 'zod';
 import type { AgenticRunResult, AgenticLifecycleHooks } from '@confused-ai/agentic';
 import type { Logger } from '../observability/types.js';
 
-export interface CreateAgentOptions {
+type AnyLightweightTool = LightweightTool<any, any>;
+
+export interface AgentRunDebugInfo {
+    enabled: true;
+    historyMessages: number;
+    memoryResults: number;
+    knowledgeContext: boolean;
+    followupsGenerated: number;
+    usage?: AgenticRunResult['usage'];
+    storageKey?: string;
+}
+
+export interface AgentRunResult extends AgenticRunResult {
+    /** Follow-up suggestions generated after the final answer when enabled. */
+    readonly followups?: string[];
+    /** TypeScript-friendly alias for `followups`. */
+    readonly followUpSuggestions?: string[];
+    /** Present when debug mode is enabled for the agent or run. */
+    readonly debug?: AgentRunDebugInfo;
+    /** Storage key used when a generic storage adapter persisted this run. */
+    readonly storageKey?: string;
+}
+
+export interface AgentContextOptions {
+    /** Include prior session messages in the model context. Defaults to legacy session behavior when a session id is used. */
+    addHistoryToContext?: boolean;
+    /** Include only the most recent N historical user turns/runs. */
+    numHistoryRuns?: number;
+    /** Include only the most recent N historical messages. Applied after `numHistoryRuns` when both are set. */
+    numHistoryMessages?: number;
+    /** Let the agent manage long-term memory through automatic `remember` and `recall` tools. */
+    enableAgenticMemory?: boolean;
+    /** Retrieve relevant memories and add them to the prompt context before a run. */
+    addMemoriesToContext?: boolean;
+    /** Maximum memories to add to context. Defaults to 5. */
+    numMemories?: number;
+    /** Retrieve knowledge base context before a run. Defaults to true when a knowledgebase is configured. */
+    addKnowledgeToContext?: boolean;
+    /** Generate follow-up suggestions after the answer. */
+    followUps?: boolean;
+    /** Maximum follow-up suggestions to generate. Defaults to 3. */
+    numFollowups?: number;
+    /** Console debug visibility for agent runs. Alias of `dev` at agent creation time. */
+    debugMode?: boolean;
+    /** Debug verbosity. Level 2 logs text chunks as they stream. */
+    debugLevel?: 1 | 2;
+}
+
+export interface CreateAgentOptions extends AgentContextOptions {
     name: string;
     instructions: string;
     llm?: LLMProvider;
@@ -40,12 +89,12 @@ export interface CreateAgentOptions {
     /**
      * Tools to give the agent.
      * - Pass an array of `tool()` / `defineTool()` results **directly** — no `.toFrameworkTool()` needed.
-     * - Mix `LightweightTool` and full `Tool` instances freely in the same array.
+    * - Mix `tool()` / `defineTool()` results and full `Tool` instances freely in the same array.
      * - Pass a `ToolRegistry` for advanced use.
      * - Pass `'web'` for the built-in preset (HttpClientTool + BrowserTool).
      * - Pass `[]`, `false`, or omit entirely for a tool-free agent (pure text reasoning).
      */
-    tools?: (Tool | LightweightTool)[] | ToolRegistry | false | 'web';
+    tools?: (Tool | AnyLightweightTool)[] | ToolRegistry | false | 'web';
     toolMiddleware?: ToolMiddleware[];
     /**
      * Session store. Pass `false` to run stateless (no session tracking).
@@ -65,6 +114,8 @@ export interface CreateAgentOptions {
     userProfileStore?: UserProfileStore;
     memoryStore?: MemoryStore;
     knowledgebase?: RAGEngine;
+    /** Generic storage for persisted run metadata, usage, and follow-up suggestions. */
+    storage?: Storage;
     inputSchema?: z.ZodType;
     outputSchema?: z.ZodType;
     dev?: boolean;
@@ -170,7 +221,7 @@ export interface CreateAgentOptions {
     hooks?: AgenticLifecycleHooks;
 }
 
-export interface AgentRunOptions {
+export interface AgentRunOptions extends AgentContextOptions {
     sessionId?: string;
     userId?: string;
     messages?: Message[];
@@ -186,6 +237,10 @@ export interface AgentRunOptions {
      * state after each step and resumes from the last checkpoint on retry.
      */
     runId?: string;
+    /** Restrict which tools may execute for this run. */
+    allowedTools?: string[];
+    /** Abort/cancel the run. */
+    signal?: import('@confused-ai/agentic').AgenticRunConfig['signal'];
 }
 
 /**
@@ -203,7 +258,7 @@ export interface StreamChunk {
     /** Present when type is 'step-finish'. */
     stepNumber?: number;
     /** Present when type is 'run-finish'. */
-    run?: AgenticRunResult;
+    run?: AgentRunResult;
     /** Present when type is 'error'. */
     error?: Error;
 }
@@ -222,7 +277,7 @@ export interface CreateAgentResult {
      * import { multiModal, imageUrl } from 'confused-ai';
      * await agent.run(await multiModal('Describe this image', imageUrl('https://...')));
      */
-    run(prompt: string | MultiModalInput, options?: AgentRunOptions): Promise<AgenticRunResult>;
+    run(prompt: string | MultiModalInput, options?: AgentRunOptions): Promise<AgentRunResult>;
     /**
      * Stream the agent's response as an async iterable of text chunks.
      *
@@ -243,7 +298,7 @@ export interface CreateAgentResult {
      * Stream the agent's response as typed `StreamChunk` events.
      *
      * Yields text deltas, tool-call/result notifications, step completions,
-     * and finally a `run-finish` event carrying the full `AgenticRunResult`.
+    * and finally a `run-finish` event carrying the full `AgentRunResult`.
      *
      * @example
      * ```ts
@@ -274,7 +329,7 @@ export interface CreateAgentResult {
      * ```
      */
     resume(sessionId: string): {
-        run(prompt: string | MultiModalInput, options?: Omit<AgentRunOptions, 'sessionId'>): Promise<AgenticRunResult>;
+        run(prompt: string | MultiModalInput, options?: Omit<AgentRunOptions, 'sessionId'>): Promise<AgentRunResult>;
         stream(prompt: string | MultiModalInput, options?: Omit<AgentRunOptions, 'sessionId' | 'onChunk'>): AsyncIterable<string>;
         streamEvents(prompt: string | MultiModalInput, options?: Omit<AgentRunOptions, 'sessionId' | 'onChunk'>): AsyncIterable<StreamChunk>;
     };

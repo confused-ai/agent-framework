@@ -1,353 +1,129 @@
 # confused-ai
 
-> TypeScript framework for building production-grade AI agents.  
-> 40+ LLM providers · 100+ built-in tools · Multi-agent orchestration · Circuit breakers · RAG · HITL · Budget enforcement
+`confused-ai` is a TypeScript agent framework built around one stable install story: start with a single package, ship one useful agent, then layer tools, retrieval, sessions, serving, orchestration, and production controls without changing frameworks midway through the project.
 
-[![npm](https://img.shields.io/npm/v/confused-ai?label=npm&color=6366f1)](https://www.npmjs.com/package/confused-ai)
-[![Version](https://img.shields.io/badge/version-2.1.0-6366f1)](./CHANGELOG.md)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
-
----
-
-## Install
-
-```bash
-npm install confused-ai        # npm
-bun add confused-ai            # bun
-pnpm add confused-ai           # pnpm
-```
-
-Set at least one provider key:
-
-```bash
-OPENAI_API_KEY=sk-...
-# or ANTHROPIC_API_KEY / GOOGLE_API_KEY / GROQ_API_KEY / MISTRAL_API_KEY / …
-```
-
----
-
-## Quick start
-
-```ts
-import { agent } from 'confused-ai';
-
-const ai = agent({ model: 'gpt-4o' });
-const result = await ai.run({ prompt: 'What is 2 + 2?' });
-console.log(result.output); // "4"
-```
-
-The model string auto-detects the provider from environment variables.
-
----
-
-## Add tools
+## One quick example
 
 ```ts
 import { agent, tool } from 'confused-ai';
-import { tavilySearch, httpClient, slackTool } from 'confused-ai/tools';
-import { z } from 'zod';
+import { z } from 'zod/v3';
 
-// Custom tool
-const getPrice = tool({
-  id: 'get_price',
-  description: 'Get the current price of a stock by ticker',
-  parameters: z.object({ ticker: z.string() }),
-  execute: async ({ ticker }) => fetch(`/api/price/${ticker}`).then(r => r.json()),
+const getQuote = tool({
+	name: 'get_quote',
+	description: 'Return a stock quote for a ticker symbol.',
+	parameters: z.object({ symbol: z.string() }),
+	execute: async ({ symbol }) => ({ symbol, price: 927.5, changePct: 1.4 }),
 });
 
-const ai = agent({
-  model: 'gpt-4o',
-  tools: [tavilySearch, httpClient, slackTool, getPrice],
-});
-```
-
----
-
-## Session memory
-
-```ts
-import { createSqliteSessionStore } from 'confused-ai/session';
-
-const ai = agent({
-  model: 'gpt-4o',
-  sessionStore: createSqliteSessionStore('./sessions.db'),
+const financeAgent = agent({
+	name: 'finance-agent',
+	model: 'gpt-4o-mini',
+	instructions: 'Use the tool to answer market questions in one concise sentence.',
+	tools: [getQuote],
 });
 
-await ai.run({ prompt: 'My name is Alice', sessionId: 'alice' });
-const r = await ai.run({ prompt: 'What is my name?', sessionId: 'alice' });
-// → "Your name is Alice."
+const result = await financeAgent.run("What's NVDA trading at today?");
+console.log(result.text);
 ```
 
----
+The intended feel is simple: plain TypeScript, one explicit capability at a time, and a direct path from small prototype to production-ready runtime.
 
-## RAG / Knowledge base
+## What it is for
 
-```ts
-import { KnowledgeEngine, loadPdf, loadUrl } from 'confused-ai/knowledge';
-import { OpenAIEmbeddingProvider, InMemoryVectorStore } from 'confused-ai/memory';
+Use `confused-ai` when you want to build one of these shapes from the same public API surface:
 
-const knowledge = new KnowledgeEngine({
-  embedding: new OpenAIEmbeddingProvider({ apiKey: process.env.OPENAI_API_KEY! }),
-  vectorStore: new InMemoryVectorStore(),
-});
+- a single agent that answers, summarizes, or classifies
+- a tool-backed assistant that reads live application data or triggers side effects
+- a retrieval-backed system that answers from documents or indexed knowledge
+- a served application with sessions, resilience, and observability
+- a multi-agent workflow with delegation, routing, or explicit reasoning steps
 
-await knowledge.ingest(await loadPdf('./docs/manual.pdf'));
-await knowledge.ingest(await loadUrl('https://docs.myapp.com'));
+The design goal is not to force every feature on day one. The design goal is to let the first useful version stay small while keeping a direct path to a larger system.
 
-const ai = agent({
-  model: 'gpt-4o',
-  knowledgebase: knowledge,       // auto-retrieves relevant chunks
-});
-```
+## Three primitives
 
----
+| Primitive | Use it when |
+|---|---|
+| Agent | one model-backed worker can handle the task |
+| Team | specialists should coordinate or delegate work |
+| Workflow | the execution path should be staged, deterministic, or branching |
 
-## Multi-agent teams
+These three shapes cover most systems in the framework. The difference is not branding. The difference is how control flows through the application.
 
-```ts
-import { createTeam, defineRole } from 'confused-ai/orchestration';
+## How to approach the framework
 
-const researcher = defineRole({ role: 'Researcher', goal: 'Find facts', llm: myProvider });
-const writer     = defineRole({ role: 'Writer',     goal: 'Write clearly', llm: myProvider });
-const reviewer   = defineRole({ role: 'Reviewer',   goal: 'Improve quality', llm: myProvider });
+The cleanest adoption path is:
 
-const team = createTeam({
-  name: 'ContentTeam',
-  mode: 'pipeline',    // sequential: researcher → writer → reviewer
-  agents: [researcher, writer, reviewer],
-});
+1. Start with one agent and one successful run.
+2. Add one missing capability at a time, usually a tool, a session store, or retrieval.
+3. Add runtime surfaces such as HTTP serving, scheduling, evaluation, or resilience only after the base behavior is correct.
 
-const result = await team.run('Write a post about the future of TypeScript');
-```
+That order matters because it keeps the model behavior understandable before infrastructure complexity gets involved.
 
-Other modes: `coordinate` (parallel), `route` (smart routing), `collaborate` (sequential).
+## Public package story
 
----
+The public install story is intentionally simple.
 
-## Production resilience
+| Import path | Use it for |
+|---|---|
+| `confused-ai` | core agent authoring, composition, and common entry points |
+| `confused-ai/session` | session stores and continuity |
+| `confused-ai/serve` | HTTP runtime |
+| `confused-ai/tool` | MCP and broader tool infrastructure |
+| `confused-ai/orchestration` | teams, supervisors, roles, and tasks |
+| `confused-ai/reasoning` | explicit reasoning steps and events |
+| `confused-ai/scheduler` | scheduled jobs and run history |
+| `confused-ai/observe` | traces, metrics, and evaluation workflows |
+| `confused-ai/adapters` | infrastructure adapters and bindings |
+| `confused-ai/guard` | runtime control primitives such as circuit breakers |
 
-```ts
-import { withResilience } from 'confused-ai/guard';
+Avoid internal `@confused-ai/*` package imports in application code and public documentation. Those paths describe the monorepo layout, not the intended consumer API.
 
-const ai = withResilience(baseAgent, {
-  circuitBreaker: { failureThreshold: 5, resetTimeoutMs: 30_000 },
-  rateLimit:      { maxRpm: 60 },
-  retry:          { maxRetries: 3, backoffMs: 1_000, exponential: true },
-});
-```
+## Core building blocks
 
----
+The framework stays understandable if you think in layers:
 
-## Guardrails & safety
+- Agents are the unit that owns instructions, model selection, tools, and runtime behavior.
+- Tools are the bridge to live data, side effects, and application-specific capabilities.
+- Sessions, memory, knowledge, and storage add continuity or external context.
+- Serving, scheduling, and orchestration control how and when the agent runs.
+- Observability, budgets, approvals, and resilience turn a useful agent into an operable system.
 
-```ts
-import { GuardrailValidator, createPiiDetectionRule, createPromptInjectionRule } from 'confused-ai/guardrails';
+Each layer is optional. Most real projects only need a subset.
 
-const guardrails = new GuardrailValidator({
-  rules: [
-    createPromptInjectionRule({ threshold: 0.7 }),
-    createPiiDetectionRule({ redact: true }),          // replaces PII with [REDACTED]
-  ],
-});
+## Capabilities
 
-const ai = agent({ model: 'gpt-4o', guardrails });
-```
+| Capability | What it gives you |
+|---|---|
+| Tools | explicit boundaries for live data and side effects |
+| Sessions | continuity across turns |
+| Memory | retained facts and selective recall |
+| Knowledge | retrieval-backed answers from indexed content |
+| Storage | durable state around the agent |
+| Serve | HTTP runtime for real applications |
+| Orchestration | teams, supervisors, roles, and routing |
+| Reasoning | explicit reasoning loops when the task needs them |
+| Scheduler | time-based execution for reports, digests, and automation |
+| Observe | traces, metrics, and evaluation workflows |
+| Guardrails and HITL | validation, approvals, and policy-driven runtime control |
 
----
+## Recommended reading order
 
-## Budget enforcement
+If you are new to the repo, follow this order:
 
-```ts
-const ai = agent({
-  model: 'gpt-4o',
-  budget: {
-    maxCostUsd: 0.10,    // hard stop at $0.10 per run
-    maxTokens: 50_000,   // or 50k tokens — whichever comes first
-  },
-});
-```
+1. `docs/guide/introduction.md` for the mental model and product story.
+2. `docs/guide/getting-started.md` for the first implementation path.
+3. `docs/examples/index.md` for runnable examples by difficulty.
+4. `docs/guide/` pages for capability-specific guidance.
+5. `docs/api/` pages for a compact public API map.
 
----
+## What to build first
 
-## Observability
+The first milestone should be boring on purpose:
 
-```ts
-import { OtelTracer, PrometheusMetrics } from 'confused-ai/observe';
-import { serve } from 'confused-ai';
+- one prompt
+- one model
+- one agent
+- one verified output
 
-await serve(ai, {
-  port: 3000,
-  tracer: new OtelTracer({ endpoint: 'http://tempo:4318/v1/traces' }),
-  metrics: new PrometheusMetrics(),   // GET /metrics → Prometheus text
-});
-// Every run, tool call, and LLM request is traced automatically
-```
-
----
-
-## Streaming
-
-```ts
-for await (const chunk of ai.stream({ prompt: 'Write a blog post' })) {
-  process.stdout.write(chunk);
-}
-```
-
----
-
-## Serve as HTTP API
-
-```ts
-import { serve } from 'confused-ai';
-
-await serve(ai, { port: 3000 });
-// POST /v1/run          { prompt, sessionId?, userId? }
-// POST /v1/stream       SSE
-// GET  /v1/health
-// GET  /v1/openapi.json
-// GET  /v1/approvals    HITL pending list
-// POST /v1/approvals/:id submit decision
-```
-
----
-
-## Graph / DAG engine
-
-```ts
-import { createGraph, DAGEngine, DurableExecutor, NodeKind } from 'confused-ai/graph';
-
-const graph = createGraph({
-  nodes: [
-    { id: 'fetch',   kind: NodeKind.Agent, config: { agent: fetchAgent } },
-    { id: 'analyse', kind: NodeKind.Agent, config: { agent: analyseAgent } },
-    { id: 'report',  kind: NodeKind.Agent, config: { agent: reportAgent } },
-  ],
-  edges: [
-    { from: 'fetch', to: 'analyse' },
-    { from: 'analyse', to: 'report' },
-  ],
-});
-
-// Durable — survives process crashes
-const executor = new DurableExecutor(graph, eventStore);
-const id = await executor.run({ input: 'Q3 analysis' });
-// If crash: await executor.resume(id);
-```
-
----
-
-## LLM Router (cost-optimised)
-
-```ts
-import { createCostRouter } from 'confused-ai/router';
-
-const router = createCostRouter({
-  providers: new Map([
-    ['gpt-4o',      openaiGPT4o],
-    ['gpt-4o-mini', openaiMini],
-    ['gemini-2.0-flash', gemini],
-  ]),
-  minCapability: 7,
-  maxInputCostPerMillion: 1.00,
-});
-```
-
----
-
-## Cron scheduler
-
-```ts
-import { ScheduleManager } from 'confused-ai/scheduler';
-
-const scheduler = new ScheduleManager();
-
-await scheduler.add({
-  id: 'daily-report',
-  cron: '0 9 * * 1-5',    // weekdays at 9am
-  handler: async () => {
-    const r = await reportAgent.run({ prompt: 'Generate daily report' });
-    await emailTool.execute({ to: 'team@company.com', body: r.output });
-  },
-});
-
-await scheduler.start();
-```
-
----
-
-## All supported LLM providers (40+)
-
-OpenAI · Anthropic · Google Gemini · AWS Bedrock · Azure OpenAI · Groq · Mistral · DeepSeek · Cohere · Fireworks · Together AI · OpenRouter · Ollama · vLLM · LM Studio · Cerebras · SambaNova · Hyperbolic · AI21 Labs · Perplexity · Alibaba DashScope (Qwen) · Zhipu AI (GLM) · Moonshot (Kimi) · 01.AI (Yi) · Baichuan · MiniMax · Volcengine · HunYuan · StepFun · InternLM · Upstage (Solar) · Replicate · Lambda Labs · Novita AI · Cloudflare Workers AI · Writer (Palmyra) · Snowflake Cortex · Lepton AI · Featherless AI · LocalAI · KoboldCpp · Text-Generation-WebUI · Jan
-
----
-
-## All 40 packages
-
-| Package | What it does |
-|---------|-------------|
-| `@confused-ai/core` | Agent runner base, types |
-| `@confused-ai/agentic` | ReAct loop, HITL, guardrails, budget |
-| `@confused-ai/models` | 40+ LLM adapters |
-| `@confused-ai/router` | Cost-optimised LLM routing |
-| `@confused-ai/tools` | 100+ built-in tools |
-| `@confused-ai/plugins` | Plugin registry |
-| `@confused-ai/memory` | Short/long-term memory, vector stores |
-| `@confused-ai/knowledge` | RAG engine, loaders, vector adapters |
-| `@confused-ai/session` | Session persistence |
-| `@confused-ai/storage` | KV + file storage |
-| `@confused-ai/artifacts` | Typed output artifacts |
-| `@confused-ai/learning` | Learning from past interactions |
-| `@confused-ai/db` | Internal SQLite/Postgres store |
-| `@confused-ai/adapter-redis` | Redis adapter |
-| `@confused-ai/guardrails` | PII, injection, moderation |
-| `@confused-ai/production` | Circuit breaker, rate limit, health |
-| `@confused-ai/guard` | `withResilience()` wrapper |
-| `@confused-ai/observe` | OTLP tracing, Prometheus, logger |
-| `@confused-ai/eval` | Evaluation, benchmarking, regression |
-| `@confused-ai/compression` | Token budget, Huffman codec |
-| `@confused-ai/config` | Env vars, secret managers |
-| `@confused-ai/context` | Context provider/backend |
-| `@confused-ai/serve` | HTTP server, SSE, OpenAPI |
-| `@confused-ai/graph` | DAG engine, durable execution |
-| `@confused-ai/orchestration` | Teams, pipelines, swarms, A2A |
-| `@confused-ai/workflow` | Branching helpers |
-| `@confused-ai/planner` | Classical AI planner |
-| `@confused-ai/reasoning` | CoT, Tree-of-Thought |
-| `@confused-ai/scheduler` | Cron scheduler |
-| `@confused-ai/background` | Background queues (BullMQ, Kafka…) |
-| `@confused-ai/execution` | Concurrency, backpressure |
-| `@confused-ai/sdk` | High-level SDK, `defineAgent`, workflows |
-| `@confused-ai/skills` | Built-in skill packs |
-| `@confused-ai/cli` | CLI: replay, inspect, export |
-| `@confused-ai/playground` | Browser chat UI |
-| `@confused-ai/test-utils` | MockLLMProvider, test runners |
-| `@confused-ai/voice` | TTS/STT voice agents |
-| `@confused-ai/video` | Video generation |
-| `@confused-ai/contracts` | Shared interfaces |
-| `@confused-ai/shared` | Internal utilities |
-
----
-
-## Documentation
-
-**[confused-ai.github.io/confused-ai](https://confused-ai.github.io/confused-ai)**
-
-- [Getting Started](https://confused-ai.github.io/confused-ai/guide/getting-started)
-- [Core Concepts](https://confused-ai.github.io/confused-ai/guide/concepts)
-- [All Modules](https://confused-ai.github.io/confused-ai/guide/all-modules)
-- [Providers (40+)](https://confused-ai.github.io/confused-ai/guide/providers)
-- [Tools (100+)](https://confused-ai.github.io/confused-ai/guide/tools)
-- [Multi-Agent](https://confused-ai.github.io/confused-ai/guide/orchestration)
-- [RAG / Knowledge](https://confused-ai.github.io/confused-ai/guide/rag)
-- [Production](https://confused-ai.github.io/confused-ai/guide/production)
-- [Guardrails](https://confused-ai.github.io/confused-ai/guide/guardrails)
-- [Observability](https://confused-ai.github.io/confused-ai/guide/observability)
-- [Evaluation](https://confused-ai.github.io/confused-ai/guide/eval)
-- [Examples](https://confused-ai.github.io/confused-ai/examples/)
-
----
-
-## License
-
-MIT © Raja Shekar Reddy Vuyyuru
+Once that path is correct, the rest of the framework becomes a set of focused additions rather than a wall of concepts to learn up front.

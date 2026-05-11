@@ -1,82 +1,72 @@
 ---
 title: Packages & Imports
-description: How confused-ai is published to npm, when to use the root package, and when to install scoped packages directly.
+description: How to use the single confused-ai npm package and its module subpaths.
 outline: [2, 3]
 ---
 
 # Packages & Imports
 
-confused-ai publishes both an umbrella package and focused scoped packages.
+Install `confused-ai` once. That is the public consumer package.
 
-Use `confused-ai` when you want the complete framework installed once. Use `confused-ai/<subpath>` when you want focused imports from that root install. Use `@confused-ai/<package>` when a package, app, or plugin should depend on one module directly.
-
-## Install everything
+Use `confused-ai` for the common agent APIs. Use `confused-ai/<module>` when you want a more focused import path from the same installation.
 
 ```bash
 npm install confused-ai
 ```
 
-The root package depends on all 40 public `@confused-ai/*` packages, so one install gives you the full framework surface.
+## Root imports
+
+Use the root package for the headline APIs that most apps start with.
 
 ```ts
-import { agent, defineTool } from 'confused-ai';
-import { createAgent } from 'confused-ai/core';
+import { agent, defineAgent, compose, tool } from 'confused-ai';
+```
+
+## Module subpaths
+
+Use subpaths when you want clearer intent or a narrower import surface.
+
+```ts
+import { TavilySearchTool } from 'confused-ai/tools';
 import { createSqliteStore } from 'confused-ai/session';
-import { KnowledgeEngine } from 'confused-ai/knowledge';
-```
-
-Root subpaths are tiny facades over the matching scoped packages. They keep imports readable while still letting bundlers tree-shake unused modules.
-
-## Install focused packages
-
-```bash
-npm install @confused-ai/core @confused-ai/models @confused-ai/tools
-```
-
-Direct scoped packages are best for libraries, adapters, serverless functions, or minimal services that only need part of the framework.
-
-```ts
-import { createAgent } from '@confused-ai/core';
-import { OpenAIProvider } from '@confused-ai/models/openai';
-import { ToolRegistryImpl } from '@confused-ai/tools';
-```
-
-Every public package includes ESM, CommonJS, and TypeScript declarations:
-
-```json
-{
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts"
-}
-```
-
-## Subpath exports
-
-Several packages expose smaller subpaths for optional features or provider-specific imports.
-
-```ts
-import { OpenAIProvider } from '@confused-ai/models/openai';
-import { createSqliteStore } from '@confused-ai/session/sqlite';
-import { loadPdf } from '@confused-ai/knowledge/loaders';
-import { compose } from '@confused-ai/workflow/compose';
-```
-
-The root package also exposes common facades:
-
-```ts
+import { GuardrailValidator, createPiiDetectionRule } from 'confused-ai/guardrails';
 import { withResilience } from 'confused-ai/production';
-import { createCostRouter } from 'confused-ai/router';
-import { createScheduler } from 'confused-ai/scheduler';
-import { createRedisAdapter } from 'confused-ai/adapter-redis';
+import { CircuitBreaker } from 'confused-ai/guard';
+import { createHttpService, listenService } from 'confused-ai/runtime';
+import { ConsoleLogger } from 'confused-ai/observability';
+import { openai } from 'confused-ai/model';
 ```
+
+Common subpaths:
+
+| Import path | Use for |
+|---|---|
+| `confused-ai/tools` | Integrations and toolkits |
+| `confused-ai/session` | Session stores |
+| `confused-ai/guardrails` | Safety rules and validators |
+| `confused-ai/production` | `withResilience()` and production wrappers |
+| `confused-ai/guard` | Low-level circuit breaker, rate limiter, health helpers |
+| `confused-ai/runtime` | HTTP runtime, auth, WebSocket transport |
+| `confused-ai/orchestration` | Supervisor, routing, consensus, A2A |
+| `confused-ai/observability` | Logging, tracing, eval utilities |
+| `confused-ai/llm` | Provider classes and routing utilities |
+| `confused-ai/model` | `openai()`, `anthropic()`, `ollama()` shorthands |
+
+## Contributor note
+
+The repository is organized internally as a monorepo, so contributors will see `@confused-ai/*` workspace package names in implementation code and build scripts.
+
+That internal layout is not the public install story. Consumer docs, app code, and examples should use:
+
+- `confused-ai`
+- `confused-ai/<module>`
 
 ## Publish checks
 
-The repository validates npm accessibility before publishing:
+The repository still validates every exported subpath before publishing:
 
 ```bash
 npm run package:prepare
 ```
 
-That command syncs manifests, builds all scoped packages, builds the root facades, and verifies that every declared export target exists on disk. `npm run publish:packages:dry-run` runs the same preparation step before simulating npm publishes.
+That command builds the single public package surface and verifies that every declared export target exists on disk.

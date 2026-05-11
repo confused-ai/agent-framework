@@ -1,12 +1,12 @@
 ---
 title: Stream Utilities
-description: Transform, filter, merge, and budget LLM streams with streamToText, streamToSSE, streamTee, streamMap, and more.
+description: Consume and transform low-level LLM provider streams with streamToText, streamToSSE, streamTee, streamMap, and related helpers.
 outline: [2, 3]
 ---
 
 # Stream Utilities
 
-`@confused-ai/models` exports a set of stream utility functions for working with `AsyncIterable<StreamChunk>` — the streaming format used throughout confused-ai. Every utility is composable with the others.
+`confused-ai/models` exports a set of helpers for `AsyncIterable<StreamDelta>` streams produced by model providers. These utilities are low-level building blocks for buffering, filtering, merging, and piping provider output to HTTP responses.
 
 ```ts
 import {
@@ -19,156 +19,141 @@ import {
   streamFilter,
   streamMerge,
   streamToNodeCallback,
-} from '@confused-ai/models';
+} from 'confused-ai/models';
 ```
 
 ---
 
-## `StreamChunk`
+## `StreamDelta`
 
-All stream utilities operate on `AsyncIterable<StreamChunk>`:
+All stream utilities operate on `AsyncIterable<StreamDelta>`:
 
 ```ts
-interface StreamChunk {
-  type:     'text' | 'tool_call' | 'tool_result' | 'usage' | 'done' | 'error';
-  text?:    string;
-  delta?:   string;           // incremental text (subset of text)
-  usage?:   { inputTokens: number; outputTokens: number; totalTokens: number };
-  toolCall?: { name: string; input: unknown };
-  error?:   unknown;
-}
+type StreamDelta =
+  | { type: 'text'; text: string }
+  | { type: 'tool_call'; id: string; name: string; argsDelta: string };
 ```
 
 ---
 
 ## `streamToText()`
 
-Collect a full stream into a single string. Buffers all `text` chunks and joins them.
+Buffer an entire stream into one string. Tool-call deltas are ignored.
 
 ```ts
-import { streamToText } from '@confused-ai/models';
-import { agent } from 'confused-ai';
+import { streamToText } from 'confused-ai/models';
 
-const ai = agent({ model: 'gpt-4o', instructions: '...' });
-const stream = ai.streamEvents('Write a haiku.');
+async function* demoStream() {
+  yield { type: 'text', text: 'Petals fall softly ' } as const;
+  yield { type: 'text', text: 'through the morning light.' } as const;
+}
 
-const text = await streamToText(stream);
-console.log(text); // "Petals fall softly / silence fills the morning air / a crow calls once"
+const text = await streamToText(demoStream());
+console.log(text); // "Petals fall softly through the morning light."
 ```
 
 ---
 
 ## `streamToChunks()`
 
-Collect a stream into an array of all `StreamChunk` objects. Useful for post-processing or inspection.
+Collect just the text segments from a stream while preserving chunk boundaries.
 
 ```ts
-import { streamToChunks } from '@confused-ai/models';
+import { streamToChunks } from 'confused-ai/models';
 
-const chunks = await streamToChunks(stream);
+async function* demoStream() {
+  yield { type: 'text', text: 'alpha ' } as const;
+  yield { type: 'tool_call', id: 'tool-1', name: 'search', argsDelta: '{"q":"beta"}' } as const;
+  yield { type: 'text', text: 'gamma' } as const;
+}
 
-// Inspect usage
-const usageChunk = chunks.find(c => c.type === 'usage');
-console.log(usageChunk?.usage?.totalTokens);
-
-// Collect all text deltas
-const text = chunks
-  .filter(c => c.type === 'text' && c.delta)
-  .map(c => c.delta)
-  .join('');
+const chunks = await streamToChunks(demoStream());
+console.log(chunks); // ['alpha ', 'gamma']
 ```
 
 ---
 
 ## `streamToSSE()`
 
-Convert a stream to Server-Sent Events format — useful for HTTP streaming endpoints.
+Pipe a provider stream directly to a Node HTTP response as Server-Sent Events.
 
 ```ts
-import { streamToSSE } from '@confused-ai/models';
-import { serve } from '@confused-ai/serve';
+import { createServer } from 'node:http';
+import { streamToSSE } from 'confused-ai/models';
 
-const app = serve();
+async function* demoStream() {
+  yield { type: 'text', text: 'Hello' } as const;
+  yield { type: 'text', text: ' world' } as const;
+}
 
-app.post('/v1/chat', async (req, res) => {
-  const ai = agent({ model: 'gpt-4o', instructions: '...' });
-  const stream = ai.streamEvents(req.body.prompt);
-
-  res.setHeader('Content-Type',  'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection',    'keep-alive');
-
-  for await (const sseChunk of streamToSSE(stream)) {
-    res.write(sseChunk);   // "data: {"type":"text","delta":"Hello"}\n\n"
-  }
-
-  res.end();
+const server = createServer(async (_req, res) => {
+  await streamToSSE(demoStream(), res, { keepAliveMs: 0 });
 });
+
+server.listen(3000);
 ```
 
 ### SSE format
 
-Each event is formatted as:
-```
-data: {"type":"text","delta":"Hello"}\n\n
-data: {"type":"done"}\n\n
-```
+`streamToSSE()` writes events like:
 
-Compatible with the browser `EventSource` API and any SSE-capable HTTP client.
+```
+event: text
+data: {"text":"Hello"}
+
+event: done
+data: {}
+```
 
 ---
 
 ## `streamWithBudget()`
 
-Enforce a token budget on a stream. Automatically truncates the stream when `maxTokens` is reached, emitting a final `done` chunk with a truncation indicator.
+Stop yielding deltas after an approximate token budget is reached.
 
 ```ts
-import { streamWithBudget } from '@confused-ai/models';
+import { streamWithBudget } from 'confused-ai/models';
 
-const stream = ai.streamEvents('Write a very long story about...');
+async function* demoStream() {
+  yield { type: 'text', text: 'A short sentence.' } as const;
+  yield { type: 'text', text: ' Another sentence that may exceed the budget.' } as const;
+}
 
-const budgetedStream = streamWithBudget(stream, {
-  maxTokens:    500,
-  onExceeded:   (used) => console.warn(`Budget exceeded at ${used} tokens`),
-  truncateAt:   'sentence',    // 'sentence' | 'word' | 'char' (default: 'char')
+const budgetedStream = streamWithBudget(demoStream(), {
+  maxTokens: 5,
+  onBudgetExceeded: (used) => console.warn(`Budget exceeded at ~${used} tokens`),
 });
 
 for await (const chunk of budgetedStream) {
-  if (chunk.type === 'text') process.stdout.write(chunk.delta ?? '');
+  if (chunk.type === 'text') process.stdout.write(chunk.text);
 }
 ```
-
-### Budget options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `maxTokens` | `number` | — | Hard token limit |
-| `onExceeded` | `(used: number) => void` | — | Called when limit hit |
-| `truncateAt` | `'sentence' \| 'word' \| 'char'` | `'char'` | Truncation granularity |
 
 ---
 
 ## `streamTee()`
 
-Duplicate a stream into two independent iterables — both receive every chunk. Useful when you need to simultaneously display text and save to a database.
+Duplicate one stream into two independent consumers.
 
 ```ts
-import { streamTee } from '@confused-ai/models';
+import { streamTee, streamToText } from 'confused-ai/models';
 
-const stream = ai.streamEvents('Explain quantum entanglement.');
-const [displayStream, saveStream] = streamTee(stream);
+async function* demoStream() {
+  yield { type: 'text', text: 'Explain ' } as const;
+  yield { type: 'text', text: 'quantum entanglement.' } as const;
+}
 
-// Consumer 1: display in real-time
-(async () => {
+const [displayStream, saveStream] = streamTee(demoStream());
+
+void (async () => {
   for await (const chunk of displayStream) {
-    if (chunk.type === 'text') process.stdout.write(chunk.delta ?? '');
+    if (chunk.type === 'text') process.stdout.write(chunk.text);
   }
 })();
 
-// Consumer 2: collect and save
-(async () => {
-  const full = await streamToText(saveStream);
-  await db.responses.insert({ prompt: '...', response: full });
+void (async () => {
+  const fullText = await streamToText(saveStream);
+  console.log(fullText);
 })();
 ```
 
@@ -180,25 +165,22 @@ const [displayStream, saveStream] = streamTee(stream);
 
 ## `streamMap()`
 
-Transform every chunk in a stream. Returns a new `AsyncIterable<T>` where `T` is the return type of your mapper.
+Transform each delta without buffering the entire stream.
 
 ```ts
-import { streamMap } from '@confused-ai/models';
+import { streamMap, streamToText } from 'confused-ai/models';
 
-// Uppercase all text deltas (toy example)
-const uppercaseStream = streamMap(stream, (chunk) => ({
-  ...chunk,
-  delta: chunk.delta?.toUpperCase(),
-}));
-
-// Extract only text deltas as plain strings
-const textOnlyStream = streamMap(
-  stream,
-  (chunk) => chunk.type === 'text' ? chunk.delta ?? '' : null,
-);
-for await (const text of textOnlyStream) {
-  if (text) process.stdout.write(text);
+async function* demoStream() {
+  yield { type: 'text', text: 'hello ' } as const;
+  yield { type: 'text', text: 'world' } as const;
 }
+
+const uppercaseStream = streamMap(demoStream(), async (delta) => {
+  if (delta.type !== 'text') return delta;
+  return { ...delta, text: delta.text.toUpperCase() };
+});
+
+console.log(await streamToText(uppercaseStream)); // "HELLO WORLD"
 ```
 
 ---
@@ -208,44 +190,38 @@ for await (const text of textOnlyStream) {
 Drop chunks that don't satisfy a predicate:
 
 ```ts
-import { streamFilter } from '@confused-ai/models';
+import { streamFilter, streamToText } from 'confused-ai/models';
 
-// Only yield text chunks — skip tool_call, tool_result, usage, done
-const textOnly = streamFilter(stream, (chunk) => chunk.type === 'text');
+async function* demoStream() {
+  yield { type: 'text', text: 'visible ' } as const;
+  yield { type: 'tool_call', id: 'tool-1', name: 'search', argsDelta: '{"q":"hidden"}' } as const;
+  yield { type: 'text', text: 'text' } as const;
+}
 
-// Skip empty deltas
-const nonEmpty = streamFilter(stream, (chunk) => {
-  if (chunk.type !== 'text') return true;
-  return (chunk.delta?.length ?? 0) > 0;
-});
+const textOnly = streamFilter(demoStream(), (delta) => delta.type === 'text');
+console.log(await streamToText(textOnly)); // "visible text"
 ```
 
 ---
 
 ## `streamMerge()`
 
-Merge multiple concurrent streams into one ordered stream. Chunks from all sources are yielded as they arrive (not interleaved in round-robin).
+Merge multiple concurrent streams into one stream. Deltas are yielded as they arrive.
 
 ```ts
-import { streamMerge } from '@confused-ai/models';
+import { streamMerge } from 'confused-ai/models';
 
-// Run two agents in parallel and stream both outputs in real-time
-const [streamA, streamB] = [
-  agentA.streamEvents('Research topic A'),
-  agentB.streamEvents('Research topic B'),
-];
-
-for await (const chunk of streamMerge([streamA, streamB])) {
-  if (chunk.type === 'text') process.stdout.write(chunk.delta ?? '');
+async function* streamA() {
+  yield { type: 'text', text: 'A1 ' } as const;
+  yield { type: 'text', text: 'A2 ' } as const;
 }
-```
 
-Each chunk includes an injected `sourceIndex` field (0-based) so you can route chunks to different UI panels:
+async function* streamB() {
+  yield { type: 'text', text: 'B1 ' } as const;
+}
 
-```ts
-for await (const chunk of streamMerge([streamA, streamB])) {
-  const panel = chunk.sourceIndex === 0 ? panelA : panelB;
-  panel.append(chunk.delta ?? '');
+for await (const chunk of streamMerge([streamA(), streamB()])) {
+  if (chunk.type === 'text') process.stdout.write(chunk.text);
 }
 ```
 
@@ -253,21 +229,25 @@ for await (const chunk of streamMerge([streamA, streamB])) {
 
 ## `streamToNodeCallback()`
 
-Adapt an `AsyncIterable<StreamChunk>` to a Node.js-style callback. Useful when integrating with older APIs that expect `(err, chunk)` callbacks.
+Adapt an `AsyncIterable<StreamDelta>` to a Node-style callback.
 
 ```ts
-import { streamToNodeCallback } from '@confused-ai/models';
+import { streamToNodeCallback } from 'confused-ai/models';
+
+async function* demoStream() {
+  yield { type: 'text', text: 'Hello' } as const;
+}
 
 streamToNodeCallback(
-  stream,
+  demoStream(),
   (err, chunk) => {
     if (err) {
       console.error('Stream error:', err);
       return;
     }
-    if (chunk?.type === 'text') process.stdout.write(chunk.delta ?? '');
+    if (chunk?.type === 'text') process.stdout.write(chunk.text);
+    if (chunk === null) console.log('\nStream complete');
   },
-  () => console.log('\nStream complete'),
 );
 ```
 
@@ -275,36 +255,39 @@ streamToNodeCallback(
 
 ## Composing utilities
 
-All utilities accept and return `AsyncIterable<StreamChunk>`, so they compose naturally:
+Most utilities accept and return `AsyncIterable<StreamDelta>`, so they compose naturally:
 
 ```ts
 import {
   streamFilter,
-  streamMap,
-  streamWithBudget,
-  streamToSSE,
   streamTee,
-} from '@confused-ai/models';
+  streamToSSE,
+  streamToText,
+  streamWithBudget,
+} from 'confused-ai/models';
+import { createServer } from 'node:http';
 
-const rawStream = ai.streamEvents(prompt);
+async function* rawStream() {
+  yield { type: 'text', text: 'hello ' } as const;
+  yield { type: 'tool_call', id: 'tool-1', name: 'search', argsDelta: '{"q":"world"}' } as const;
+  yield { type: 'text', text: 'world' } as const;
+}
 
 // Build a processing pipeline:
 const [logStream, responseStream] = streamTee(
   streamWithBudget(
-    streamFilter(rawStream, c => c.type !== 'usage'),  // drop usage chunks
-    { maxTokens: 1000 },                               // cap at 1000 tokens
+    streamFilter(rawStream(), (delta) => delta.type === 'text'),
+    { maxTokens: 1000 },
   ),
 );
 
-// Send SSE to HTTP client
-for await (const sse of streamToSSE(responseStream)) {
-  res.write(sse);
-}
+const server = createServer(async (_req, res) => {
+  await streamToSSE(responseStream, res, { keepAliveMs: 0 });
+});
 
-// Log to observability store
-for await (const chunk of logStream) {
-  await obs.record(chunk);
-}
+server.listen(3000);
+
+console.log(await streamToText(logStream));
 ```
 
 ---
@@ -313,15 +296,15 @@ for await (const chunk of logStream) {
 
 | Function | Input | Output | Description |
 |----------|-------|--------|-------------|
-| `streamToText` | `AsyncIterable<StreamChunk>` | `Promise<string>` | Collect all text |
-| `streamToChunks` | `AsyncIterable<StreamChunk>` | `Promise<StreamChunk[]>` | Collect all chunks |
-| `streamToSSE` | `AsyncIterable<StreamChunk>` | `AsyncIterable<string>` | Format as SSE events |
-| `streamWithBudget` | `AsyncIterable<StreamChunk>` | `AsyncIterable<StreamChunk>` | Token-budget gate |
+| `streamToText` | `AsyncIterable<StreamDelta>` | `Promise<string>` | Collect all text |
+| `streamToChunks` | `AsyncIterable<StreamDelta>` | `Promise<string[]>` | Collect text chunks |
+| `streamToSSE` | `AsyncIterable<StreamDelta>` | `Promise<void>` | Write SSE to a `ServerResponse` |
+| `streamWithBudget` | `AsyncIterable<StreamDelta>` | `AsyncIterable<StreamDelta>` | Token-budget gate |
 | `streamTee` | `AsyncIterable<StreamChunk>` | `[AsyncIterable, AsyncIterable]` | Duplicate stream |
-| `streamMap` | `AsyncIterable<StreamChunk>` | `AsyncIterable<T>` | Transform each chunk |
-| `streamFilter` | `AsyncIterable<StreamChunk>` | `AsyncIterable<StreamChunk>` | Drop chunks |
-| `streamMerge` | `AsyncIterable<StreamChunk>[]` | `AsyncIterable<StreamChunk>` | Merge multiple streams |
-| `streamToNodeCallback` | `AsyncIterable<StreamChunk>` | `void` | Node.js callback adapter |
+| `streamMap` | `AsyncIterable<StreamDelta>` | `AsyncIterable<StreamDelta>` | Transform each delta |
+| `streamFilter` | `AsyncIterable<StreamDelta>` | `AsyncIterable<StreamDelta>` | Drop deltas |
+| `streamMerge` | `AsyncIterable<StreamDelta>[]` | `AsyncIterable<StreamDelta>` | Merge multiple streams |
+| `streamToNodeCallback` | `AsyncIterable<StreamDelta>` | `void` | Node.js callback adapter |
 
 ---
 

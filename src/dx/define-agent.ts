@@ -21,8 +21,6 @@ import type { AgenticLifecycleHooks } from '@confused-ai/agentic';
 import type { z } from 'zod';
 import { createAgent } from '../create-agent.js';
 import { InMemorySessionStore } from '@confused-ai/session';
-import { createDevLogger } from './dev-logger.js';
-import { createDevToolMiddleware } from './dev-logger.js';
 
 export interface DefineAgentOptions
     extends Pick<
@@ -45,12 +43,24 @@ export interface DefineAgentOptions
         | 'userProfileStore'
         | 'memoryStore'
         | 'knowledgebase'
+        | 'storage'
         | 'inputSchema'
         | 'outputSchema'
         | 'hooks'
         | 'budget'
         | 'checkpointStore'
         | 'adapters'
+        | 'addHistoryToContext'
+        | 'numHistoryRuns'
+        | 'numHistoryMessages'
+        | 'enableAgenticMemory'
+        | 'addMemoriesToContext'
+        | 'numMemories'
+        | 'addKnowledgeToContext'
+        | 'followUps'
+        | 'numFollowups'
+        | 'debugMode'
+        | 'debugLevel'
     > {
     /** Enable dev mode: console logger + tool call logging */
     dev?: boolean;
@@ -240,6 +250,45 @@ class AgentBuilder {
         return new AgentBuilder({ ...this.options, adapters });
     }
 
+    /** Include prior session history in context, optionally limited by recent runs/messages. */
+    history(options: { enabled?: boolean; numRuns?: number; numMessages?: number } = {}): AgentBuilder {
+        return new AgentBuilder({
+            ...this.options,
+            addHistoryToContext: options.enabled ?? true,
+            ...(options.numRuns !== undefined && { numHistoryRuns: options.numRuns }),
+            ...(options.numMessages !== undefined && { numHistoryMessages: options.numMessages }),
+        });
+    }
+
+    /** Enable agent-driven long-term memory tools (`remember` and `recall`). */
+    agenticMemory(enabled = true): AgentBuilder {
+        return new AgentBuilder({ ...this.options, enableAgenticMemory: enabled });
+    }
+
+    /** Add retrieved long-term memories to the run context. */
+    memoryContext(options: { enabled?: boolean; limit?: number } = {}): AgentBuilder {
+        return new AgentBuilder({
+            ...this.options,
+            addMemoriesToContext: options.enabled ?? true,
+            ...(options.limit !== undefined && { numMemories: options.limit }),
+        });
+    }
+
+    /** Control whether configured knowledge base context is added before each run. */
+    knowledgeContext(enabled = true): AgentBuilder {
+        return new AgentBuilder({ ...this.options, addKnowledgeToContext: enabled });
+    }
+
+    /** Generate follow-up suggestions after each run. */
+    followups(count = 3): AgentBuilder {
+        return new AgentBuilder({ ...this.options, followUps: true, numFollowups: count });
+    }
+
+    /** Enable console debug visibility. */
+    debugMode(level: 1 | 2 = 1): AgentBuilder {
+        return new AgentBuilder({ ...this.options, debugMode: true, debugLevel: level });
+    }
+
     /**
      * Opt out of ALL framework defaults.
      * After calling this, build() will not inject any tools, session, or guardrails
@@ -285,21 +334,26 @@ class AgentBuilder {
             userProfileStore: opts.userProfileStore,
             memoryStore: opts.memoryStore,
             knowledgebase: opts.knowledgebase,
+            storage: opts.storage,
             inputSchema: opts.inputSchema,
             outputSchema: opts.outputSchema,
             hooks: opts.hooks,
             budget: opts.budget,
             checkpointStore: opts.checkpointStore,
             adapters: opts.adapters,
+            dev: opts.dev,
+            addHistoryToContext: opts.addHistoryToContext,
+            numHistoryRuns: opts.numHistoryRuns,
+            numHistoryMessages: opts.numHistoryMessages,
+            enableAgenticMemory: opts.enableAgenticMemory,
+            addMemoriesToContext: opts.addMemoriesToContext,
+            numMemories: opts.numMemories,
+            addKnowledgeToContext: opts.addKnowledgeToContext,
+            followUps: opts.followUps,
+            numFollowups: opts.numFollowups,
+            debugMode: opts.debugMode,
+            debugLevel: opts.debugLevel,
         };
-
-        if (opts.dev) {
-            createOpts.logger = createOpts.logger ?? createDevLogger();
-            createOpts.toolMiddleware = [
-                ...(createOpts.toolMiddleware ?? []),
-                createDevToolMiddleware(),
-            ];
-        }
 
         return createAgent(createOpts);
     }

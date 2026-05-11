@@ -111,6 +111,39 @@ describe('confused-ai/create-agent (src/create-agent.ts)', () => {
     });
 });
 
+// ── Subpath: ./lite ──────────────────────────────────────────────────────────
+
+describe('confused-ai/lite (src/lite.ts)', () => {
+    it('exports the minimal modern agent surface', async () => {
+        const m = await import('../src/lite.js');
+        expect(m.agent).toBeDefined();
+        expect(m.createAgent).toBeDefined();
+        expect(m.defineAgent).toBeDefined();
+    });
+
+    it('does not export umbrella barrel symbols', async () => {
+        const m = await import('../src/lite.js');
+        expect((m as Record<string, unknown>).InMemorySessionStore).toBeUndefined();
+        expect((m as Record<string, unknown>).Agent).toBeUndefined();
+    });
+});
+
+// ── Granular tool category subpaths ─────────────────────────────────────────
+
+describe('confused-ai/tools/* category subpaths', () => {
+    it('search exports search tools without communication tools', async () => {
+        const m = await import('../src/tools/search/index.js');
+        expect(m.TavilySearchTool).toBeDefined();
+        expect((m as Record<string, unknown>).SlackSendMessageTool).toBeUndefined();
+    });
+
+    it('core exports tool infrastructure without search tools', async () => {
+        const m = await import('../src/tools/core/index.js');
+        expect(m.tool).toBeDefined();
+        expect((m as Record<string, unknown>).TavilySearchTool).toBeUndefined();
+    });
+});
+
 // ── Subpath: ./playground ────────────────────────────────────────────────────
 
 describe('confused-ai/playground (src/playground.ts)', () => {
@@ -190,6 +223,14 @@ describe('@confused-ai/tools', () => {
         expect(m.createShellTool).toBeDefined();
         // The unrestricted singleton must NOT be exported from the barrel
         expect((m as Record<string, unknown>)['shell']).toBeUndefined();
+    });
+});
+
+describe('@confused-ai/tools/search', () => {
+    it('exports search tools without pulling the whole tools barrel', async () => {
+        const m = await import('@confused-ai/tools/search');
+        expect(m.TavilySearchTool).toBeDefined();
+        expect((m as Record<string, unknown>).SlackSendMessageTool).toBeUndefined();
     });
 });
 

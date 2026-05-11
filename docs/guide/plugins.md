@@ -1,100 +1,26 @@
+---
+title: Plugins
+description: Add reusable extension behavior to the framework without baking every concern directly into the agent or application core.
+outline: [2, 3]
+---
+
 # Plugins
 
-Plugins are reusable middleware you attach to agents via `.use()`. They can intercept hooks, add tools, modify config, and share state.
+Plugins are the extension surface for behavior that should be reusable, modular, and separate from the core agent logic. They are useful when a capability belongs to the framework boundary rather than to one specific agent.
 
-## Built-in plugins
+## When a plugin makes sense
 
-### Logging plugin
+Use a plugin when:
 
-```ts
-import { loggingPlugin } from 'confused-ai/plugins';
-import { defineAgent } from 'confused-ai';
+- the behavior should be shared across several agents or services
+- the capability is cross-cutting rather than task-specific
+- you want to extend the framework without rewriting application code everywhere
 
-const myAgent = defineAgent({ model: 'gpt-4o', instructions: '...' })
-  .use(loggingPlugin({ level: 'info' }));
-```
+## Design guideline
 
-### Rate limit plugin
+Keep plugins focused. If a plugin tries to own several unrelated concerns, it becomes harder to reason about than the code it was supposed to simplify.
 
-```ts
-import { rateLimitPlugin } from 'confused-ai/plugins';
+## Where to go next
 
-const myAgent = defineAgent({ model: 'gpt-4o', instructions: '...' })
-  .use(rateLimitPlugin({
-    requestsPerMinute: 60,
-    tokensPerMinute: 100_000,
-    perUser: true,
-  }));
-```
-
-### Telemetry plugin
-
-```ts
-import { telemetryPlugin } from 'confused-ai/plugins';
-
-const myAgent = defineAgent({ model: 'gpt-4o', instructions: '...' })
-  .use(telemetryPlugin({
-    serviceName: 'my-agent-service',
-    otlpEndpoint: 'http://localhost:4318',
-  }));
-```
-
-## Custom plugins
-
-A plugin is a function that receives and optionally modifies agent config:
-
-```ts
-import type { AgentPlugin } from 'confused-ai/plugins';
-
-const myPlugin: AgentPlugin = (config) => ({
-  ...config,
-  hooks: {
-    ...config.hooks,
-    beforeRun: async (ctx) => {
-      // your logic here
-      return config.hooks?.beforeRun?.(ctx);
-    },
-  },
-});
-
-const myAgent = defineAgent({ model: 'gpt-4o', instructions: '...' })
-  .use(myPlugin);
-```
-
-## Parameterized plugins
-
-```ts
-import type { AgentPlugin } from 'confused-ai/plugins';
-
-function auditPlugin(options: { store: Storage }): AgentPlugin {
-  return (config) => ({
-    ...config,
-    hooks: {
-      ...config.hooks,
-      afterRun: async (output, ctx) => {
-        await options.store.set(`audit:${ctx.runId}`, {
-          input: ctx.input,
-          output,
-          timestamp: Date.now(),
-          model: ctx.model,
-        });
-        return config.hooks?.afterRun?.(output, ctx);
-      },
-    },
-  });
-}
-
-const store = createStorage({ driver: 'file', basePath: './audit-log' });
-const myAgent = defineAgent({ model: 'gpt-4o', instructions: '...' })
-  .use(auditPlugin({ store }));
-```
-
-## Composing plugins
-
-```ts
-const myAgent = defineAgent({ model: 'gpt-4o', instructions: '...' })
-  .use(loggingPlugin({ level: 'debug' }))
-  .use(rateLimitPlugin({ requestsPerMinute: 30 }))
-  .use(telemetryPlugin({ serviceName: 'my-service' }))
-  .use(auditPlugin({ store }));
-```
+- Read `hooks.md` when the extension should attach to lifecycle events.
+- Read `custom-adapter.md` when the concern is infrastructure binding rather than framework behavior.

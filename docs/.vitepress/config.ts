@@ -25,6 +25,7 @@ export default defineConfig({
         'PROGRESS.md',
         'GLOSSARY.md',
         'TECHNICAL-AUDIT-2026-05-08.md',
+        'src/content/docs/**',
     ],
 
     sitemap: {
@@ -35,7 +36,7 @@ export default defineConfig({
         // Favicon & theme
         ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}favicon.svg` }],
         ['link', { rel: 'shortcut icon', href: `${base}favicon.svg` }],
-        ['meta', { name: 'theme-color', content: '#6366f1' }],
+        ['meta', { name: 'theme-color', content: '#0f766e' }],
 
         // Open Graph
         ['meta', { property: 'og:type', content: 'website' }],
@@ -69,7 +70,7 @@ export default defineConfig({
         siteTitle: 'Confused-AI',
 
         nav: [
-            { text: 'Guide', link: '/guide/getting-started', activeMatch: '/guide/' },
+            { text: 'Guide', link: '/guide/introduction', activeMatch: '/guide/' },
             { text: 'Examples', link: '/examples/', activeMatch: '/examples/' },
             { text: 'API Reference', link: '/api/', activeMatch: '/api/' },
             {
@@ -87,7 +88,7 @@ export default defineConfig({
                 ],
             },
             {
-                text: 'v1.2.0',
+                text: 'v2.2.1',
                 items: [
                     { text: '📋 Changelog', link: '/changelog' },
                     { text: '📦 npm package', link: 'https://www.npmjs.com/package/confused-ai' },
@@ -104,6 +105,7 @@ export default defineConfig({
                     text: 'Introduction',
                     collapsed: false,
                     items: [
+                        { text: 'Introduction', link: '/guide/introduction' },
                         { text: 'Getting Started', link: '/guide/getting-started' },
                         { text: 'Core Concepts', link: '/guide/concepts' },
                         { text: 'Packages & Imports', link: '/guide/packages' },
@@ -266,9 +268,9 @@ export default defineConfig({
                         { text: 'Overview', link: '/api/' },
                         { text: 'agent() / createAgent()', link: '/api/agent' },
                         { text: 'tool() / defineTool()', link: '/api/tools' },
-                        { text: 'KnowledgeEngine', link: '/api/knowledge' },
+                        { text: 'KnowledgeEngine / createKnowledgeEngine()', link: '/api/knowledge' },
                         { text: 'createStorage()', link: '/api/storage' },
-                        { text: 'Orchestration', link: '/api/orchestration' },
+                        { text: 'Workflow / Orchestration', link: '/api/orchestration' },
                     ],
                 },
             ],

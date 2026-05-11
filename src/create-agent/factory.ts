@@ -1,17 +1,20 @@
 import type { Message } from '../providers/types.js';
 import type { AgenticStreamHooks } from '@confused-ai/agentic';
 import { withSpan } from '@confused-ai/observe';
-import type { ToolProvider } from '@confused-ai/tools';
+import type { Tool, ToolProvider, ToolResult } from '@confused-ai/tools';
 import { createAgenticAgent } from '@confused-ai/agentic';
 import { HttpClientTool } from '@confused-ai/tools';
 import { BrowserTool } from '@confused-ai/tools';
+import { ToolCategory } from '@confused-ai/tools';
 import { InMemorySessionStore } from '@confused-ai/session';
 import { ConfigError } from '@confused-ai/shared';
 import { toToolRegistry } from '@confused-ai/tools';
 import { isLightweightTool } from '@confused-ai/tools';
+import { createAgentMemoryTools, InMemoryStore } from '@confused-ai/memory';
+import type { MemorySearchResult, MemoryStore } from '@confused-ai/memory';
 import { createDevLogger, createDevToolMiddleware } from '../dx/dev-logger.js';
 import { BudgetEnforcer } from '../production/budget.js';
-import type { CreateAgentOptions, CreateAgentResult, AgentRunOptions, StreamChunk } from './types.js';
+import type { CreateAgentOptions, CreateAgentResult, AgentRunOptions, AgentRunResult, StreamChunk } from './types.js';
 import type { AdapterRegistry, AdapterBindings } from '../adapters/index.js';
 import type { AppConfig } from '@confused-ai/config';
 import {
@@ -30,21 +33,201 @@ import { isMultiModalInput, multiModalToMessage } from '../providers/vision.js';
  * - `'web'`            → preset: [HttpClientTool, BrowserTool]
  * - array / registry   → use as-is; LightweightTool instances are auto-converted
  */
-function resolveTools(toolsOption: CreateAgentOptions['tools']): ReturnType<typeof toToolRegistry> {
+type AgentTool = Extract<NonNullable<CreateAgentOptions['tools']>, readonly unknown[]>[number];
+
+function resolveTools(
+    toolsOption: CreateAgentOptions['tools'],
+    extraTools: AgentTool[] = [],
+): ReturnType<typeof toToolRegistry> {
+    let registry: ReturnType<typeof toToolRegistry>;
     if (toolsOption === false || toolsOption === undefined) {
-        return toToolRegistry([]);
-    }
-    if (toolsOption === 'web') {
-        return toToolRegistry([new HttpClientTool(), new BrowserTool()] as ToolProvider);
-    }
-    // Auto-convert any LightweightTool (tool() / defineTool()) in the array
-    if (Array.isArray(toolsOption)) {
-        const normalized = toolsOption.map((t) =>
-            isLightweightTool(t) ? t.toFrameworkTool() : t,
+        registry = toToolRegistry([]);
+    } else if (toolsOption === 'web') {
+        registry = toToolRegistry([new HttpClientTool(), new BrowserTool()] as ToolProvider);
+    } else if (Array.isArray(toolsOption)) {
+        const normalized = toolsOption.map((tool) =>
+            isLightweightTool(tool) ? tool.toFrameworkTool() : tool,
         );
-        return toToolRegistry(normalized as ToolProvider);
+        registry = toToolRegistry(normalized as ToolProvider);
+    } else {
+        registry = toToolRegistry(toolsOption as ToolProvider);
     }
-    return toToolRegistry(toolsOption as ToolProvider);
+
+    if (extraTools.length === 0) return registry;
+    return toToolRegistry([...registry.list(), ...extraTools] as ToolProvider);
+}
+
+function pickBoolean(
+    runValue: boolean | undefined,
+    agentValue: boolean | undefined,
+    fallback: boolean,
+): boolean {
+    return runValue ?? agentValue ?? fallback;
+}
+
+function pickNumber(
+    runValue: number | undefined,
+    agentValue: number | undefined,
+    fallback: number,
+): number {
+    const value = runValue ?? agentValue ?? fallback;
+    if (!Number.isFinite(value)) return fallback;
+    return Math.max(0, Math.floor(value));
+}
+
+function trimHistoryByRuns(history: Message[], runLimit: number | undefined): Message[] {
+    if (runLimit === undefined) return history;
+    if (runLimit <= 0) return [];
+
+    let userTurns = 0;
+    let startIndex = 0;
+    for (let index = history.length - 1; index >= 0; index--) {
+        if (history[index]?.role !== 'user') continue;
+        userTurns++;
+        if (userTurns > runLimit) {
+            break;
+        }
+        startIndex = index;
+    }
+    return history.slice(startIndex);
+}
+
+function trimHistoryByMessages(history: Message[], messageLimit: number | undefined): Message[] {
+    if (messageLimit === undefined) return history;
+    if (messageLimit <= 0) return [];
+    return history.slice(-messageLimit);
+}
+
+function selectHistoryForContext(history: Message[], runOptions: AgentRunOptions | undefined, options: CreateAgentOptions): Message[] {
+    const runLimit = runOptions?.numHistoryRuns ?? options.numHistoryRuns;
+    const messageLimit = runOptions?.numHistoryMessages ?? options.numHistoryMessages;
+    return trimHistoryByMessages(trimHistoryByRuns(history, runLimit), messageLimit);
+}
+
+function formatMemoryContext(results: MemorySearchResult[]): string | undefined {
+    if (results.length === 0) return undefined;
+    const lines = results.map((result) => `- ${result.entry.content}`);
+    return `[Memory Context]\n${lines.join('\n')}`;
+}
+
+async function buildMemoryContext(
+    memoryStore: MemoryStore | undefined,
+    prompt: string,
+    limit: number,
+): Promise<{ context?: string; count: number }> {
+    if (!memoryStore) return { count: 0 };
+    const results = await memoryStore.retrieve({ query: prompt, limit, threshold: 0.1 });
+    return { context: formatMemoryContext(results), count: results.length };
+}
+
+function combineContext(memoryContext: string | undefined, knowledgeContext: string | undefined): string | undefined {
+    const sections = [memoryContext, knowledgeContext].filter((section): section is string => !!section?.trim());
+    return sections.length ? sections.join('\n\n') : undefined;
+}
+
+function parseFollowups(text: string, limit: number): string[] {
+    const withoutFence = text.replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim();
+    const candidates: unknown[] = [];
+
+    try {
+        const parsed = JSON.parse(withoutFence) as unknown;
+        if (Array.isArray(parsed)) candidates.push(...parsed);
+        else if (parsed && typeof parsed === 'object') {
+            const record = parsed as { followups?: unknown; followUpSuggestions?: unknown };
+            const values = Array.isArray(record.followups)
+                ? record.followups
+                : Array.isArray(record.followUpSuggestions)
+                  ? record.followUpSuggestions
+                  : [];
+            candidates.push(...values);
+        }
+    } catch {
+        const lines = withoutFence
+            .split('\n')
+            .map((line) => line.replace(/^[-*\d.)\s]+/, '').trim())
+            .filter(Boolean);
+        candidates.push(...lines);
+    }
+
+    const seen = new Set<string>();
+    const followups: string[] = [];
+    for (const candidate of candidates) {
+        if (typeof candidate !== 'string') continue;
+        const value = candidate.trim();
+        if (!value || seen.has(value)) continue;
+        seen.add(value);
+        followups.push(value);
+        if (followups.length >= limit) break;
+    }
+    return followups;
+}
+
+async function generateFollowups(
+    llm: ReturnType<typeof resolveLlmForCreateAgent>,
+    prompt: string,
+    answer: string,
+    count: number,
+): Promise<string[]> {
+    if (count <= 0 || !answer.trim()) return [];
+    const result = await llm.generateText([
+        {
+            role: 'system',
+            content: `Generate exactly ${count} concise follow-up questions the user may naturally ask next. Return only JSON: {"followups":["..."]}.`,
+        },
+        {
+            role: 'user',
+            content: `Original user prompt:\n${prompt}\n\nAssistant answer:\n${answer}`,
+        },
+    ] as Message[], { temperature: 0.4, maxTokens: 512, toolChoice: 'none' });
+    return parseFollowups(result.text ?? '', count);
+}
+
+function storageKey(agentName: string, runId: string | undefined): string {
+    const safeName = agentName.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-|-$/g, '') || 'agent';
+    return `agent:${safeName}:runs:${runId ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`}`;
+}
+
+function createFrameworkMemoryTools(memoryStore: MemoryStore): AgentTool[] {
+    const memoryTools = Object.values(createAgentMemoryTools({ store: memoryStore }));
+    return memoryTools.map((memoryTool): AgentTool => ({
+        id: memoryTool.name,
+        name: memoryTool.name,
+        description: memoryTool.description,
+        parameters: memoryTool.parameters as Tool['parameters'],
+        permissions: {
+            allowNetwork: false,
+            allowFileSystem: false,
+            maxExecutionTimeMs: 30_000,
+        },
+        category: ToolCategory.UTILITY,
+        version: '1.0.0',
+        validate(params: unknown): params is never {
+            return memoryTool.parameters.safeParse(params).success;
+        },
+        async execute(params: never): Promise<ToolResult> {
+            const startedAt = new Date();
+            const startMs = Date.now();
+            try {
+                const data = await memoryTool.execute(params);
+                return {
+                    success: true,
+                    data,
+                    executionTimeMs: Date.now() - startMs,
+                    metadata: { startTime: startedAt, endTime: new Date(), retries: 0 },
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: {
+                        code: 'MEMORY_TOOL_ERROR',
+                        message: error instanceof Error ? error.message : String(error),
+                    },
+                    executionTimeMs: Date.now() - startMs,
+                    metadata: { startTime: startedAt, endTime: new Date(), retries: 0 },
+                };
+            }
+        },
+    }));
 }
 
 /**
@@ -141,6 +324,9 @@ export function createAgent(options: CreateAgentOptions): CreateAgentResult {
         hooks: agentHooks,
     } = options;
 
+    const agentDebugMode = dev === true || options.debugMode === true;
+    const agentDebugLevel = options.debugLevel ?? 1;
+
     if (!name || typeof name !== 'string' || name.trim() === '') {
         throw new ConfigError('createAgent: name is required and must be a non-empty string', {
             context: { options: { name } },
@@ -152,7 +338,14 @@ export function createAgent(options: CreateAgentOptions): CreateAgentResult {
         });
     }
 
-    const tools = resolveTools(options.tools);
+    const agenticMemoryEnabled = options.enableAgenticMemory === true;
+    const wantsMemoryContext = options.addMemoriesToContext === true;
+    const effectiveMemoryStore = options.memoryStore ?? (agenticMemoryEnabled || wantsMemoryContext ? new InMemoryStore({ debug: agentDebugMode }) : undefined);
+    const memoryTools = agenticMemoryEnabled && effectiveMemoryStore
+        ? createFrameworkMemoryTools(effectiveMemoryStore)
+        : [];
+
+    const tools = resolveTools(options.tools, memoryTools);
 
     // Resolve adapter bindings — merges registry / explicit bindings + convenience fields
     const adapterBindings = resolveAdapterBindings(options);
@@ -190,8 +383,9 @@ export function createAgent(options: CreateAgentOptions): CreateAgentResult {
     // Budget enforcer — instantiated once per agent, reset on each run
     const budgetEnforcer = options.budget ? new BudgetEnforcer(options.budget) : undefined;
 
-    const effectiveLogger = logger ?? (dev ? createDevLogger() : undefined);
-    const effectiveToolMiddleware = [...(toolMiddleware ?? []), ...(dev ? [createDevToolMiddleware()] : [])];
+    const storage = options.storage;
+    const effectiveLogger = logger ?? (agentDebugMode ? createDevLogger() : undefined);
+    const effectiveToolMiddleware = [...(toolMiddleware ?? []), ...(agentDebugMode ? [createDevToolMiddleware()] : [])];
 
     if (effectiveLogger?.debug) {
         effectiveLogger.debug('createAgent: initializing', { agentId: name }, { toolsCount: tools.list().length });
@@ -209,7 +403,6 @@ export function createAgent(options: CreateAgentOptions): CreateAgentResult {
         guardrails,
         hooks: agentHooks as any,
         checkpointStore: options.checkpointStore,
-        knowledgebase: options.knowledgebase as any,
         budgetEnforcer: budgetEnforcer as any,
         budgetModelId: model,
     });
@@ -235,26 +428,63 @@ export function createAgent(options: CreateAgentOptions): CreateAgentResult {
                 : { role: 'user', content: promptText };
 
             const sessionId = runOptions?.sessionId;
+            const runDebugMode = pickBoolean(
+                runOptions?.debugMode,
+                options.debugMode ?? dev,
+                agentDebugMode,
+            );
+            const runDebugLevel = runOptions?.debugLevel ?? agentDebugLevel;
+            const runLogger = runDebugMode ? (effectiveLogger ?? createDevLogger()) : undefined;
             const streamHooks: AgenticStreamHooks = {
-                onChunk: runOptions?.onChunk,
-                onToolCall: runOptions?.onToolCall,
-                onToolResult: runOptions?.onToolResult,
-                onStep: runOptions?.onStep,
+                onChunk: (text: string) => {
+                    if (runDebugMode && runDebugLevel >= 2) {
+                        runLogger?.debug('agent.run: chunk', { agentId: name }, { length: text.length });
+                    }
+                    runOptions?.onChunk?.(text);
+                },
+                onToolCall: (toolName: string, args: Record<string, unknown>) => {
+                    runLogger?.debug('agent.run: tool call', { agentId: name }, { toolName });
+                    runOptions?.onToolCall?.(toolName, args);
+                },
+                onToolResult: (toolName: string, result: unknown) => {
+                    runLogger?.debug('agent.run: tool result', { agentId: name }, { toolName });
+                    runOptions?.onToolResult?.(toolName, result);
+                },
+                onStep: (step: number) => {
+                    runLogger?.debug('agent.run: step', { agentId: name }, { step });
+                    runOptions?.onStep?.(step);
+                },
             };
 
             let messages: Message[] | undefined;
+            let fullSessionHistory: Message[] = [];
+            let historyMessagesInContext = 0;
             if (runOptions?.messages?.length) {
+                const addHistory = pickBoolean(
+                    runOptions.addHistoryToContext,
+                    options.addHistoryToContext,
+                    true,
+                );
+                const selectedHistory = addHistory ? selectHistoryForContext(runOptions.messages, runOptions, options) : [];
+                historyMessagesInContext = selectedHistory.length;
                 messages = [
                     { role: 'system', content: instructions },
-                    ...runOptions.messages,
+                    ...selectedHistory,
                     userMessage,
                 ];
             } else if (sessionId && sessionStore) {
                 const session = await sessionStore.get(sessionId);
-                const history = session?.messages ?? [];
+                fullSessionHistory = [...(session?.messages ?? [])] as Message[];
+                const addHistory = pickBoolean(
+                    runOptions?.addHistoryToContext,
+                    options.addHistoryToContext,
+                    true,
+                );
+                const selectedHistory = addHistory ? selectHistoryForContext(fullSessionHistory, runOptions, options) : [];
+                historyMessagesInContext = selectedHistory.length;
                 messages = [
                     { role: 'system', content: instructions },
-                    ...history,
+                    ...selectedHistory,
                     userMessage,
                 ];
             } else if (isMMI) {
@@ -268,13 +498,41 @@ export function createAgent(options: CreateAgentOptions): CreateAgentResult {
             // Reset per-run budget accumulator
             budgetEnforcer?.resetRun();
 
-            const ragContext = (options.knowledgebase && options.knowledgebase.buildContext)
+            const addKnowledgeToContext = pickBoolean(
+                runOptions?.addKnowledgeToContext,
+                options.addKnowledgeToContext,
+                !!options.knowledgebase,
+            );
+            const knowledgeContext = addKnowledgeToContext && options.knowledgebase?.buildContext
                 ? await options.knowledgebase.buildContext(promptText)
                 : undefined;
 
+            const addMemoriesToContext = pickBoolean(
+                runOptions?.addMemoriesToContext,
+                options.addMemoriesToContext,
+                !!effectiveMemoryStore && (agenticMemoryEnabled || wantsMemoryContext),
+            );
+            const memoryLimit = pickNumber(
+                runOptions?.numMemories,
+                options.numMemories,
+                5,
+            );
+            const memoryContext = addMemoriesToContext
+                ? await buildMemoryContext(effectiveMemoryStore, promptText, memoryLimit)
+                : { count: 0 };
+            const ragContext = combineContext(memoryContext.context, knowledgeContext);
+
+            runLogger?.debug('agent.run: start', { agentId: name }, {
+                sessionId,
+                historyMessages: historyMessagesInContext,
+                memoryResults: memoryContext.count,
+                knowledgeContext: !!knowledgeContext,
+            });
+
             // Per-run hooks are passed via runConfig.hooks — the runner merges them with
             // agent-level hooks locally. No shared config mutation; concurrent runs are isolated.
-            const result = await agent.run(
+            const inputMessageCount = messages?.length ?? 0;
+            let result = await agent.run(
                 {
                     prompt: messages ? '' : promptText,
                     instructions,
@@ -282,15 +540,80 @@ export function createAgent(options: CreateAgentOptions): CreateAgentResult {
                     maxSteps,
                     timeoutMs,
                     ragContext,
+                    ...(options.outputSchema && { responseModel: options.outputSchema as any }),
                     ...(runOptions?.hooks   && { hooks:  runOptions.hooks }),
                     ...(runOptions?.runId   && { runId:  runOptions.runId }),
                     ...(runOptions?.userId  && { userId: runOptions.userId }),
+                    ...(runOptions?.signal  && { signal: runOptions.signal }),
+                    ...(runOptions?.allowedTools && { allowedTools: runOptions.allowedTools }),
                 },
                 streamHooks
+            ) as AgentRunResult;
+
+            const followupsEnabled = pickBoolean(
+                runOptions?.followUps,
+                options.followUps,
+                false,
             );
+            const followupsCount = pickNumber(
+                runOptions?.numFollowups,
+                options.numFollowups,
+                3,
+            );
+            const followups = followupsEnabled
+                ? await generateFollowups(llm, promptText, result.text, followupsCount)
+                : [];
+
+            if (followups.length > 0) {
+                result = {
+                    ...result,
+                    followups,
+                    followUpSuggestions: followups,
+                };
+            }
+
+            let persistedStorageKey: string | undefined;
+            if (storage) {
+                persistedStorageKey = storageKey(name, runOptions?.runId);
+                await storage.set(persistedStorageKey, {
+                    agent: name,
+                    sessionId,
+                    runId: runOptions?.runId,
+                    prompt: promptText,
+                    text: result.text,
+                    usage: result.usage,
+                    followups,
+                    finishReason: result.finishReason,
+                    steps: result.steps,
+                    createdAt: new Date().toISOString(),
+                });
+                result = { ...result, storageKey: persistedStorageKey };
+            }
+
+            if (runDebugMode) {
+                result = {
+                    ...result,
+                    debug: {
+                        enabled: true,
+                        historyMessages: historyMessagesInContext,
+                        memoryResults: memoryContext.count,
+                        knowledgeContext: !!knowledgeContext,
+                        followupsGenerated: followups.length,
+                        ...(result.usage && { usage: result.usage }),
+                        ...(persistedStorageKey && { storageKey: persistedStorageKey }),
+                    },
+                };
+            }
 
             if (sessionId && sessionStore && result.messages?.length) {
-                const persistMessages = result.messages.filter((m: Message) => m.role !== 'system');
+                const newMessages = messages
+                    ? result.messages.slice(inputMessageCount).filter((message: Message) => message.role !== 'system')
+                    : result.messages.filter((message: Message) => message.role !== 'system');
+                const persistMessages = [
+                    ...fullSessionHistory.filter((message: Message) => message.role !== 'system'),
+                    userMessage,
+                    ...newMessages,
+                ];
                 await sessionStore.update(sessionId, {
                     messages: persistMessages as any,
                 });
@@ -300,6 +623,12 @@ export function createAgent(options: CreateAgentOptions): CreateAgentResult {
                 runSpan.setAttribute('llm.usage.total_tokens', result.usage.totalTokens);
             }
             runSpan.setAttribute('agent.finish_reason', result.finishReason ?? 'stop');
+            runSpan.setAttribute('agent.followups.count', followups.length);
+            runLogger?.debug('agent.run: finish', { agentId: name }, {
+                finishReason: result.finishReason,
+                steps: result.steps,
+                followups: followups.length,
+            });
             return result;
                 }, // end withSpan callback
             ); // end withSpan
@@ -390,7 +719,7 @@ export function createAgent(options: CreateAgentOptions): CreateAgentResult {
                 let notify: (() => void) | null = null;
                 let finished = false;
                 let runError: unknown;
-                let runResult: import('@confused-ai/agentic').AgenticRunResult | undefined;
+                let runResult: import('./types.js').AgentRunResult | undefined;
 
                 const runPromise = self.run(prompt, {
                     ...runOptions,

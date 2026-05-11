@@ -1,103 +1,45 @@
 ---
 title: Workflows
-description: Sequential and parallel agent workflows using createWorkflow() from the SDK.
+description: Design structured execution paths when the order, branching, or staged shape of the task matters as much as the model output.
 outline: [2, 3]
 ---
 
 # Workflows
 
-`@confused-ai/sdk` provides `createWorkflow()` for composing agents into reusable, type-safe workflows.
+Workflows are for problems where control flow is part of the solution. They help when the task should move through explicit stages, branches, retries, or checkpoints instead of being left entirely to one free-form agent run.
 
-## Sequential workflow
+## When to use a workflow
 
-```ts
-import { createWorkflow } from '@confused-ai/sdk';
+Reach for workflows when:
 
-const researchWorkflow = createWorkflow('research-pipeline')
-  .step('gather', researchAgent)
-  .step('summarise', summariseAgent)
-  .step('format', formatAgent)
-  .build();
+- the task has a clear sequence of stages
+- some steps should only run after earlier steps succeed
+- the path may branch based on results
+- you want deterministic structure around model calls
 
-const result = await researchWorkflow.run('Latest TypeScript features in 2026');
-console.log(result.output);       // final formatted output
-console.log(result.stepResults);  // per-step outputs
-```
+If the task is still just “ask the model and optionally call tools,” a single agent is usually enough.
 
-## Parallel workflow
+## Workflow versus orchestration
 
-```ts
-const parallelWorkflow = createWorkflow('parallel-research')
-  .parallel([
-    { name: 'news',   agent: newsAgent },
-    { name: 'papers', agent: papersAgent },
-    { name: 'social', agent: socialAgent },
-  ])
-  .step('synthesise', synthesiseAgent)  // runs after all parallel steps
-  .build();
+Use workflows when the main challenge is the structure of execution.
 
-const result = await parallelWorkflow.run('AI in healthcare 2026');
-```
+Use orchestration when the main challenge is distributing responsibilities across roles or specialists.
 
-## Conditional branching
+Many systems eventually use both, but the distinction is useful because it tells you what to design first.
 
-```ts
-import { createWorkflow } from '@confused-ai/sdk';
+## Recommended rollout
 
-const workflow = createWorkflow('smart-router')
-  .step('classify', classifyAgent)
-  .branch({
-    condition: (result) => result.output.includes('billing'),
-    ifTrue:  billingAgent,
-    ifFalse: supportAgent,
-  })
-  .build();
-```
+1. Start with the smallest useful sequence.
+2. Make the handoff between stages explicit.
+3. Add branching only when the simple path is already solid.
+4. Keep the workflow inspectable so you can tell which stage caused a failure.
 
-## `dependsOn` — explicit dependencies
+## Design guideline
 
-```ts
-const workflow = createWorkflow('analysis')
-  .step('a', agentA)
-  .step('b', agentB)
-  .step('c', agentC, { dependsOn: ['a', 'b'] })  // waits for both a and b
-  .build();
-```
+The best workflows make the runtime easier to explain. If the graph or stage layout feels harder to understand than the original task, the workflow is probably too complicated.
 
-## Workflow branching helpers
+## Where to go next
 
-```ts
-import {
-  branch,
-  loopUntil,
-  forEach,
-  race,
-  retry,
-} from 'confused-ai/workflow-branching';
-
-// branch: conditional routing
-const router = branch({
-  condition: (ctx) => ctx.sentiment === 'negative',
-  ifTrue:  escalationAgent,
-  ifFalse: standardAgent,
-});
-
-// loopUntil: repeat until condition met
-const refiner = loopUntil({
-  agent: draftAgent,
-  condition: (result) => result.score > 0.9,
-  maxIterations: 5,
-});
-
-// forEach: map over an array of inputs
-const batchProcessor = forEach({
-  agent: processAgent,
-  concurrency: 4,
-});
-
-// race: first agent to respond wins
-const fastest = race([agentA, agentB, agentC]);
-
-// retry: retry on failure
-const resilient = retry(unreliableAgent, { maxRetries: 3, backoffMs: 500 });
-```
+- Read `compose.md` for fixed sequential composition.
+- Read `workflow-branching.md` for conditional paths.
+- Read `graph.md` for graph-shaped execution.

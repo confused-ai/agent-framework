@@ -49,10 +49,15 @@ export * from './a2a/http-client.js';
 export * from './a2a/server.js';
 
 // ── Developer-experience helpers ──────────────────────────────────────────
-// defineRole: CrewAI-style role builder → structured system prompt + agent
-// createTeam: ergonomic team factory wrapping Team / Router / Pipeline
-export { defineRole, buildSystemPrompt } from './dx/define-role.js';
+// defineRole: role builder → structured system prompt + agent
+// defineTask: task primitive with dependency resolution and context injection
+// createTeam: ergonomic team factory with planning and delegation support
+export { defineRole, buildSystemPrompt, buildDelegationTools } from './dx/define-role.js';
 export type { RoleDefinition, RoleAgent } from './dx/define-role.js';
+export { defineTask, resolveTaskBatches, buildTaskPrompt, buildTaskContextBlock, TaskCycleError } from './dx/define-task.js';
+export type { TaskDefinition, TaskHandle } from './dx/define-task.js';
+export { generateExecutionPlan, renderPlanBlock } from './dx/planner.js';
+export type { ExecutionPlan, PlanStep, PlannerOptions } from './dx/planner.js';
 export { createTeam } from './dx/create-team.js';
 export type { TeamMode, TeamOptions, TeamHandle, TeamRunResult } from './dx/create-team.js';
 

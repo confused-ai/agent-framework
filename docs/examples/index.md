@@ -1,36 +1,36 @@
 # Examples Playbook
 
-Real-world examples covering **every feature** of confused-ai. Pick your level.
+The examples are the fastest way to understand how the framework is meant to feel in practice. Start with the smallest runnable pattern, then move toward the examples that match the next capability you need.
 
----
+## If you are new, start here
 
-## Full framework map (start here)
+1. [01 · Hello World](./01-hello-world) for the smallest working agent.
+2. [02 · First Custom Tool](./02-custom-tool) for the baseline pattern that connects the framework to real application code.
+3. [05 · RAG Knowledge Base](./05-rag) if the answers should come from your documents.
+4. [13 · Production Resilience](./13-production) when the agent is becoming a real service.
 
-For a **single narrative** that walks every capability area—NorthPeak StoreOps Copilot, import cheat-sheets, architecture diagram, and links back to these tutorials—see **[17 · Full framework showcase](./17-full-framework-showcase)**.
+## Full framework map
+
+If you want one page that ties the broader capability story together, start with [17 · Full framework showcase](./17-full-framework-showcase). It connects the examples back to the module layout and the larger runtime model.
 
 Runnable counterparts in the repo:
 
-- `bun run example:showcase` — LLM, sessions, workflows, pipeline, health, metrics, optional HTTP.
-- `bun run example:potential` — chunking, circuit breaker, rate limiter, artifacts, profiles, eval metrics, config (no LLM calls).
-- `bun run example:meridian` — full role intelligence platform: 6 personas, handoff, router, supervisor, consensus, RAG, HTTP server.
-- `bun run example:reasoning` — chain-of-thought incident triage with `ReasoningManager`.
-- `bun run example:scheduled` — nightly market digest cron with `ScheduleManager`.
-- `bun run example:code-review` — three-agent PR review pipeline with `bare()`, `compose()`, `pipe()`.
-- `bun run example:eval` — CI eval regression guard with `runEvalSuite` + `InMemoryEvalStore`.
+- `bun run example:showcase` for a broad framework tour
+- `bun run example:meridian` for a larger orchestration-heavy platform demo
+- `bun run example:reasoning` for explicit reasoning loops
+- `bun run example:scheduled` for scheduled agents
+- `bun run example:code-review` for staged review pipelines
+- `bun run example:eval` for regression-style evaluation
 
----
+## Skill levels
 
-## Skill Levels
-
-| Label | Who it's for |
+| Level | Best for |
 |---|---|
-| 🟢 **Beginner** | Never used an AI framework. First time here. |
-| 🟡 **Intermediate** | Built basic agents, want real-world patterns. |
-| 🔴 **Advanced** | Production systems, orchestration, resilience. |
+| Beginner | first contact with the framework or with agent authoring in general |
+| Intermediate | tool-backed, retrieval-backed, or observable agents |
+| Advanced | orchestration, production runtime controls, and evaluation-heavy systems |
 
----
-
-## All Examples
+## All examples
 
 | # | Example | Level | What you learn |
 |---|---|---|---|
@@ -57,9 +57,7 @@ Runnable counterparts in the repo:
 | 21 | [Code Review Pipeline](./21-code-review-pipeline) | 🔴 | `bare()`, `compose()`, `pipe()`, conditional `when` hand-off, lifecycle hooks |
 | 22 | [Eval Regression Guard](./22-eval-ci) | 🟡 | `runEvalSuite`, `EvalStore`, custom scorer, baseline saving, CI exit code |
 
----
-
-## Quick Start (30 seconds)
+## Quick start
 
 ```bash
 npm install confused-ai
@@ -80,7 +78,7 @@ console.log(result.text); // "4"
 
 ---
 
-## Environment Variables
+## Environment variables
 
 Most examples need these in a `.env` file:
 

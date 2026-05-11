@@ -18,11 +18,10 @@
  * ```
  */
 
-import type { LightweightTool } from './tool-helper.js';
+import type { LightweightTool, ToolObjectSchemaLike } from './tool-helper.js';
 import type { ToolResult } from './types.js';
 import { ToolCache } from './tool-cache.js';
 import { ToolCompressor } from './tool-compressor.js';
-import type { ZodObject, ZodRawShape } from 'zod';
 
 // ── withCache ─────────────────────────────────────────────────────────────────
 
@@ -36,7 +35,7 @@ import type { ZodObject, ZodRawShape } from 'zod';
  *
  * Failed results (`success: false`) are never cached.
  */
-export function withCache<TSchema extends ZodObject<ZodRawShape>, TOutput>(
+export function withCache<TSchema extends ToolObjectSchemaLike<Record<string, unknown>>, TOutput>(
     baseTool: LightweightTool<TSchema, TOutput>,
     cache: ToolCache,
 ): LightweightTool<TSchema, TOutput> {
@@ -80,7 +79,7 @@ export function withCache<TSchema extends ZodObject<ZodRawShape>, TOutput>(
  *
  * Errors are passed through unmodified.
  */
-export function withCompression<TSchema extends ZodObject<ZodRawShape>, TOutput>(
+export function withCompression<TSchema extends ToolObjectSchemaLike<Record<string, unknown>>, TOutput>(
     baseTool: LightweightTool<TSchema, TOutput>,
     compressor: ToolCompressor,
 ): LightweightTool<TSchema, TOutput> {

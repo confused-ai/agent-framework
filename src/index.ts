@@ -23,14 +23,14 @@ export { Agent } from './agent.js';
 
 // ── createAgent (legacy) — use agent() instead ─────────────────────────────────
 export { createAgent } from './create-agent.js';
-export type { CreateAgentOptions, CreateAgentResult } from './create-agent.js';
+export type { CreateAgentOptions, AgentRunOptions, AgentRunResult, CreateAgentResult } from './create-agent.js';
 
 // ── Core framework ─────────────────────────────────────────────────────────────
 export * from './core/index.js';
 
 // ── Memory ─────────────────────────────────────────────────────────────────────
-export { InMemoryStore, VectorMemoryStore, InMemoryVectorStore, OpenAIEmbeddingProvider } from '@confused-ai/memory';
-export type { VectorMemoryStoreConfig, EmbeddingProvider, MemoryStore, MemoryEntry, MemoryQuery, MemoryType } from '@confused-ai/memory';
+export { InMemoryStore, VectorMemoryStore, InMemoryVectorStore, OpenAIEmbeddingProvider, MemoryType } from '@confused-ai/memory';
+export type { VectorMemoryStoreConfig, EmbeddingProvider, MemoryStore, MemoryEntry, MemoryQuery } from '@confused-ai/memory';
 
 // ── Tools ─────────────────────────────────────────────────────────────────────
 export * from '@confused-ai/tools';

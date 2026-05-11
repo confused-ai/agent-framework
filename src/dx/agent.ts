@@ -8,8 +8,6 @@
 import type { CreateAgentResult } from '../create-agent.js';
 import type { CreateAgentOptions } from '../create-agent.js';
 import { createAgent } from '../create-agent.js';
-import { createDevLogger } from './dev-logger.js';
-import { createDevToolMiddleware } from './dev-logger.js';
 
 /** Minimal options when using agent({ ... }) */
 export type AgentMinimalOptions = Partial<
@@ -48,42 +46,13 @@ export function agent(instructionsOrOptions: string | AgentMinimalOptions): Crea
     const opts = isString ? {} as AgentMinimalOptions : instructionsOrOptions;
 
     const options: CreateAgentOptions = {
+        ...opts,
         name: isString ? 'Agent' : (opts.name ?? 'Agent'),
         instructions: isString ? instructionsOrOptions : (opts.instructions ?? ''),
-        model: opts.model,
-        apiKey: opts.apiKey,
-        baseURL: opts.baseURL,
-        openRouter: opts.openRouter,
-        llm: opts.llm,
-        // Only inject default tools when user hasn't explicitly set anything.
-        // tools: false → no tools; tools: [] → no tools; tools: [...] → use those.
-        tools: (opts as AgentMinimalOptions).tools,
-        toolMiddleware: opts.toolMiddleware,
-        sessionStore: opts.sessionStore,
-        guardrails: opts.guardrails,
-        maxSteps: opts.maxSteps,
-        timeoutMs: opts.timeoutMs,
-        retry: opts.retry,
-        logger: opts.logger,
-        learningMode: opts.learningMode,
-        userProfileStore: opts.userProfileStore,
-        memoryStore: opts.memoryStore,
-        knowledgebase: opts.knowledgebase,
-        inputSchema: opts.inputSchema,
-        outputSchema: opts.outputSchema,
-        hooks: opts.hooks,
     };
 
     if (!options.instructions?.trim()) {
         throw new Error('agent() requires instructions. Use agent("...") or agent({ instructions: "..." }).');
-    }
-
-    if (opts.dev) {
-        options.logger = options.logger ?? createDevLogger();
-        options.toolMiddleware = [
-            ...(options.toolMiddleware ?? []),
-            createDevToolMiddleware(),
-        ];
     }
 
     return createAgent(options);

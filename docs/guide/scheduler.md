@@ -1,94 +1,34 @@
 ---
 title: Scheduler
-description: Run agents on a cron schedule with the built-in scheduler.
+description: Run agents on a schedule with predictable handlers, inspectable run history, and a clean path from manual testing to durable automation.
 outline: [2, 3]
 ---
 
 # Scheduler
 
-`@confused-ai/scheduler` lets you run agents on a schedule using cron expressions.
+Scheduling is the right runtime when the system should run on time instead of in response to an interactive request. It turns agents into predictable jobs such as digests, reports, audits, or background automation.
 
-## Basic usage
+## Good fits for scheduled agents
 
-```ts
-import { ScheduleManager } from 'confused-ai/scheduler';
+Use scheduled execution for jobs such as:
 
-const scheduler = new ScheduleManager();
+- daily or weekly summaries
+- periodic health or quality checks
+- recurring classification or enrichment work
+- batch processing that does not need a live user request
 
-// Add a schedule
-await scheduler.add({
-  id: 'daily-report',
-  cron: '0 9 * * *',           // every day at 9am
-  handler: async () => {
-    const result = await reportAgent.run({
-      prompt: 'Generate the daily sales report for today',
-    });
-    await emailTool.execute({ to: 'team@company.com', body: result.output });
-  },
-  timezone: 'America/New_York',
-  enabled: true,
-});
+## Recommended rollout
 
-// Start processing
-await scheduler.start();
-```
+1. Start with a clear handler boundary.
+2. Validate manual triggering before relying on the clock.
+3. Inspect run history and failure modes.
+4. Add durable schedule storage when the schedule itself must survive restarts.
 
-## Cron expression reference
+## Design guideline
 
-```
-┌─── minute (0-59)
-│ ┌─── hour (0-23)
-│ │ ┌─── day of month (1-31)
-│ │ │ ┌─── month (1-12)
-│ │ │ │ ┌─── day of week (0-6, Sun=0)
-* * * * *
+Scheduled work should be idempotent or at least easy to reason about when retried. If a job cannot safely be retried or replayed, the scheduler boundary needs more thought before it goes live.
 
-Examples:
-  0 * * * *    — every hour
-  0 9 * * 1-5  — weekdays at 9am
-  */15 * * * * — every 15 minutes
-  0 0 1 * *    — first of every month at midnight
-```
+## Where to go next
 
-## Validate a cron expression
-
-```ts
-import { validateCronExpr, computeNextRun } from 'confused-ai/scheduler';
-
-const result = validateCronExpr('0 9 * * 1-5');
-console.log(result.valid);    // true
-console.log(result.error);    // undefined
-
-const next = computeNextRun('0 9 * * *', new Date());
-console.log(next);            // next 9am
-```
-
-## Managing schedules
-
-```ts
-// List all schedules
-const schedules = await scheduler.list();
-
-// Enable / disable
-await scheduler.enable('daily-report');
-await scheduler.disable('daily-report');
-
-// Trigger immediately (ignore cron)
-await scheduler.trigger('daily-report');
-
-// Remove
-await scheduler.remove('daily-report');
-
-// Stop scheduler
-await scheduler.stop();
-```
-
-## Persistent schedule store (survives restarts)
-
-```ts
-import { DbScheduleStore } from 'confused-ai/scheduler';
-
-const store = new DbScheduleStore({ url: 'file:./schedules.db' });
-
-const scheduler = new ScheduleManager({ store });
-```
+- Read `production.md` when the scheduled job becomes part of a broader service runtime.
+- Use the scheduled agent example when you want a concrete pattern.

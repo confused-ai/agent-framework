@@ -1,227 +1,38 @@
 ---
-title: Guardrails & Safety
-description: PII detection, prompt injection defense, content moderation, tool allowlists, and output validation.
+title: Guardrails
+description: Apply validation and policy controls where they actually reduce risk without turning the whole system into a wall of defensive configuration.
 outline: [2, 3]
 ---
 
-# Guardrails & Safety
+# Guardrails
 
-`@confused-ai/guardrails` provides safety layers for agent inputs and outputs. Rules run before and after every LLM response.
+Guardrails are the rules and validation layers that keep agent behavior inside acceptable boundaries. They matter most when incorrect output is costly, unsafe, or operationally disruptive.
 
-## Quick start
+## What guardrails are good at
 
-```ts
-import { agent } from 'confused-ai';
-import {
-  GuardrailValidator,
-  createPiiDetectionRule,
-  createPromptInjectionRule,
-  createMaxLengthRule,
-} from 'confused-ai/guardrails';
+Use guardrails for concerns such as:
 
-const guardrails = new GuardrailValidator({
-  rules: [
-    createPromptInjectionRule({ threshold: 0.7 }),  // block injection attempts
-    createPiiDetectionRule({ redact: true }),         // redact PII in output
-    createMaxLengthRule('output-limit', 10_000),     // cap output length
-  ],
-});
+- input and output validation
+- policy checks
+- moderation or sensitive-content handling
+- enforcing constraints before the result leaves the agent boundary
 
-const ai = agent({
-  model: 'gpt-4o',
-  guardrails,
-});
-```
+## When to add them
 
-## Built-in rules
+Add guardrails after the base flow is already working. That order matters because guardrails are easiest to design when you already understand the successful path and the failure cases you actually care about.
 
-### PII detection & redaction
+## Recommended rollout
 
-Detects and optionally redacts: email, phone, SSN, credit card, passport, IP address, JWT tokens, AWS keys, and more:
+1. Identify the specific failure you want to prevent.
+2. Add the narrowest rule that blocks that failure.
+3. Validate the rule against real edge cases.
+4. Expand gradually instead of installing a broad policy layer that nobody understands.
 
-```ts
-import { createPiiDetectionRule } from 'confused-ai/guardrails';
+## Design guideline
 
-const piiRule = createPiiDetectionRule({
-  redact: true,          // replace PII with [REDACTED]
-  severity: 'high',      // 'low' | 'medium' | 'high'
-  patterns: ['email', 'phone', 'ssn', 'credit_card'],  // defaults to all
-});
-```
+The best guardrails are explicit and reviewable. If a rule exists, the team should be able to explain what it protects and what tradeoff it introduces.
 
-Detect PII in any string directly:
+## Where to go next
 
-```ts
-import { detectPii } from 'confused-ai/guardrails';
-
-const result = await detectPii('Call me at 555-1234 or email@example.com');
-console.log(result.found);    // true
-console.log(result.types);    // ['phone', 'email']
-console.log(result.redacted); // 'Call me at [PHONE] or [EMAIL]'
-```
-
-### Prompt injection defense
-
-Detects attempts to hijack the agent's instructions:
-
-```ts
-import { createPromptInjectionRule } from 'confused-ai/guardrails';
-
-const injectionRule = createPromptInjectionRule({
-  threshold: 0.7,    // 0–1 confidence threshold
-  mode: 'pattern',   // 'pattern' | 'llm' | 'both'
-});
-```
-
-### Content rules
-
-Block or allow specific patterns in outputs:
-
-```ts
-import { createContentRule, createForbiddenTopicsRule } from 'confused-ai/guardrails';
-
-// Block outputs matching a regex
-const noHarmful = createContentRule(
-  'no-harmful',
-  'Block harmful content',
-  /\b(harm|hurt|kill)\b/i,
-  'high'
-);
-
-// Block specific topics
-const noCompetitors = createForbiddenTopicsRule({
-  topics: ['CompetitorA', 'CompetitorB'],
-  severity: 'medium',
-});
-```
-
-### Tool allowlist
-
-Only permit specific tools to be called:
-
-```ts
-import { createToolAllowlistRule } from 'confused-ai/guardrails';
-
-const toolRule = createToolAllowlistRule(['web_search', 'calculator', 'get_weather']);
-// Agent will refuse to call any other tool
-```
-
-### URL validation
-
-Prevent SSRF by allowlisting domains:
-
-```ts
-import { createUrlValidationRule } from 'confused-ai/guardrails';
-
-const urlRule = createUrlValidationRule({
-  allowedDomains: ['api.myservice.com', 'docs.example.com'],
-  blockPrivateIps: true,
-  blockHttp: true,  // require HTTPS
-});
-```
-
-### Output length cap
-
-```ts
-import { createMaxLengthRule } from 'confused-ai/guardrails';
-
-const lengthRule = createMaxLengthRule('output-limit', 8_000, 'medium');
-```
-
-### OpenAI Moderation API
-
-```ts
-import { createOpenAiModerationRule } from 'confused-ai/guardrails';
-
-const modRule = createOpenAiModerationRule({
-  apiKey: process.env.OPENAI_API_KEY!,
-  blockedCategories: ['hate', 'violence', 'sexual'],
-});
-```
-
-## Composing multiple rules
-
-```ts
-const guardrails = new GuardrailValidator({
-  rules: [
-    createPromptInjectionRule(),
-    createPiiDetectionRule({ redact: true }),
-    createToolAllowlistRule(['web_search', 'calculator']),
-    createMaxLengthRule('limit', 10_000),
-    createOpenAiModerationRule({ apiKey: process.env.OPENAI_API_KEY! }),
-  ],
-  // Called when any rule triggers
-  onViolation: async (violation) => {
-    await auditLog.write({
-      rule: violation.rule,
-      severity: violation.severity,
-      message: violation.message,
-    });
-  },
-});
-```
-
-## HITL — Human-in-the-Loop
-
-Request human approval before sensitive tool calls:
-
-```ts
-import { agent } from 'confused-ai';
-
-const ai = agent({
-  model: 'gpt-4o',
-  humanInTheLoop: {
-    beforeToolCall: async (tool, args) => {
-      if (['send_email', 'delete_record', 'execute_sql'].includes(tool.id)) {
-        // POST to your approval API — agent pauses here until decision
-        const decision = await approvalStore.request({
-          tool: tool.id,
-          args,
-          requestedBy: 'agent',
-        });
-        return { approved: decision.approved, reason: decision.comment };
-      }
-      return { approved: true };
-    },
-    beforeFinish: async (result) => {
-      // Review final answer before returning to user
-      return { approved: true };
-    },
-  },
-});
-```
-
-### Approval store via HTTP API
-
-When using `serve()`, approvals are managed via REST:
-
-```ts
-// List pending approvals
-GET /v1/approvals
-
-// Submit a decision
-POST /v1/approvals/:id
-{ "approved": true, "comment": "Looks good", "decidedBy": "alice" }
-```
-
-## Custom guardrail rules
-
-```ts
-import type { GuardrailRule, GuardrailContext } from 'confused-ai/guardrails';
-
-const noCodeExecution: GuardrailRule = {
-  name: 'no-code-execution',
-  severity: 'critical',
-  check: async (ctx: GuardrailContext) => {
-    if (ctx.toolCall?.id === 'execute_code') {
-      return {
-        passed: false,
-        message: 'Code execution is not allowed in this context',
-      };
-    }
-    return { passed: true };
-  },
-};
-
-const guardrails = new GuardrailValidator({ rules: [noCodeExecution] });
-```
+- Read `hitl.md` when a failure should escalate to a human rather than just fail automatically.
+- Read `production.md` when you are assembling the broader runtime control stack.

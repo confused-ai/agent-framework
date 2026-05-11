@@ -23,7 +23,7 @@
     "@confused-ai/guardrails": "0.1.0",
     "@confused-ai/observe": "0.1.0",
     "@confused-ai/shared": "0.1.0",
-    "zod": "^3.0.0"
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "@confused-ai/compression": "0.1.0",

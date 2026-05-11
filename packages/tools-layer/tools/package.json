@@ -46,7 +46,7 @@
     "@confused-ai/contracts": "0.1.0",
     "@confused-ai/core": "0.1.0",
     "@confused-ai/shared": "0.1.0",
-    "zod": "^3.0.0"
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "playwright": ">=1.0.0",

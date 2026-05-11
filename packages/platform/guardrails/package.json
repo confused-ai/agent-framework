@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "^3.0.0",
+    "zod": "^4.4.3",
     "@confused-ai/core": "0.1.0"
   },
   "devDependencies": {

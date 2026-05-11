@@ -26,7 +26,7 @@
     "@confused-ai/planner": "0.1.0",
     "@confused-ai/shared": "0.1.0",
     "@confused-ai/tools": "0.1.0",
-    "zod": "^3.0.0"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "tsup": "*",

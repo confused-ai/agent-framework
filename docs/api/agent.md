@@ -1,69 +1,140 @@
 ---
-title: agent() / createAgent()
-description: Choose the right agent authoring API and understand the common runtime patterns.
+title: agent() / createAgent() API
+description: Complete reference for agent(), createAgent(), defineAgent(), bare(), and all AgentConfig options including tools, sessions, memory, knowledge, guardrails, hooks, and budget.
 outline: [2, 3]
 ---
 
-# agent() / createAgent()
+# agent() / createAgent() API
 
-The root package exposes four related ways to author agents. They solve different levels of control, not different products.
-
-## Which One To Use
-
-| API | Use when | Recommendation |
-|---|---|---|
-| `agent()` | You want the default authoring path for new code | Start here |
-| `createAgent()` | You want the explicit factory surface or need compatibility with factory-oriented code | Use when the explicit factory is clearer |
-| `defineAgent()` | You want typed input and output contracts | Use for app and API boundaries |
-| `Agent` | You are maintaining older class-based code | Avoid for new code unless you need the class surface |
-
-## Minimal Agent
+The root package exposes four agent authoring functions for different levels of control. All share the same underlying runtime — the differences are in how much they configure by default and what contract they expose.
 
 ```ts
-import { agent } from 'confused-ai';
+import { agent, createAgent, defineAgent, bare } from 'confused-ai';
+```
 
-const assistant = agent({
+---
+
+## Which function to use
+
+| Function | Use when |
+|---|---|
+| `agent()` | Standard path for new application code — opinionated defaults |
+| `createAgent()` | Explicit factory style — same capabilities, more readable in factory-heavy codebases |
+| `defineAgent()` | Typed input/output contracts for API boundaries and workflow steps |
+| `bare()` | Minimal agent for pipelines and tests — no sessions, no guardrails by default |
+
+---
+
+## `agent()` / `createAgent()`
+
+Both functions accept an identical `AgentConfig` object and return an `Agent` instance. Prefer `agent()` for new code; use `createAgent()` when the explicit factory name reads better in context.
+
+```ts
+import { createAgent } from 'confused-ai';
+
+const assistant = createAgent({
   name: 'assistant',
-  model: 'openai:gpt-4o-mini',
-  instructions: 'You are a concise assistant.',
+  model: 'gpt-4o-mini',
+  apiKey: process.env.OPENAI_API_KEY!,
+  instructions: 'You are a concise, helpful assistant.',
   tools: [],
   sessionStore: false,
   guardrails: false,
 });
 
-const result = await assistant.run('Summarize vector databases in one sentence.');
+const result = await assistant.run('What is idempotency?');
 console.log(result.text);
 ```
 
-This is the shortest path to a production-shaped agent. It keeps the important switches visible without forcing you into every optional subsystem.
+---
 
-## What You Configure First
+## `AgentConfig` — all options
 
-| Option | What it controls | Add it when |
+### Core (required)
+
+| Option | Type | Description |
 |---|---|---|
-| `model` | provider or model instance | always |
-| `instructions` | baseline system behavior | always |
-| `tools` | callable external capabilities | the model must act on live data or side effects |
-| `sessionStore` | conversation continuity | users return across turns |
-| `knowledgebase` | retrieval context | the agent should answer from docs, policies, or indexed content |
-| `guardrails` | safety and validation | you need policy enforcement or output checking |
-| `budget` | token or cost control | production spend matters |
+| `name` | `string` | Agent identifier — used in logs, traces, and session scoping |
+| `instructions` | `string \| string[]` | System prompt. Arrays are joined with a space. |
+| `model` | `string \| LLMProvider` | Model string (`'gpt-4o-mini'`) or provider instance |
+| `apiKey` | `string` | Provider API key — not required when `llm` is a custom provider |
 
-## Running Patterns
+### Tools
 
-### Request and response
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `tools` | `Tool[] \| false` | `[]` | Tools the agent can call. `false` disables tools entirely. |
+
+### State and memory
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `sessionStore` | `SessionStore \| false` | auto | Conversation continuity store. `false` disables sessions. |
+| `memoryStore` | `MemoryStore` | — | Long-term memory store for cross-session recall |
+| `knowledgebase` | `KnowledgeEngine` | — | RAG engine — context injected into every run |
+
+### Safety and quality
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `guardrails` | `Guardrails \| false` | auto | Input/output safety rules. `false` disables all guardrails. |
+| `maxSteps` | `number` | `10` | Maximum tool call steps per run before forcing a stop |
+
+### Resilience
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `retry` | `RetryConfig` | — | Retry policy for failed LLM calls |
+| `timeoutMs` | `number` | — | Per-run timeout in milliseconds |
+| `budget` | `BudgetConfig` | — | Hard caps on token and cost spend |
+| `checkpointStore` | `CheckpointStore` | — | Persist run state for durable resume |
+
+### Observability
+
+| Option | Type | Description |
+|---|---|---|
+| `hooks` | `AgenticLifecycleHooks` | Lifecycle callbacks for logging, tracing, and metrics |
+| `observer` | `Observer` | Structured event emitter for `confused-ai/observe` integration |
+
+### Advanced
+
+| Option | Type | Description |
+|---|---|---|
+| `llm` | `LLMProvider \| LLMRouter` | Custom provider or router — overrides `model` and `apiKey` |
+| `contextProviders` | `ContextProvider[]` | Additional context injected into the system prompt |
+
+---
+
+## `agent.run()` — request-response
 
 ```ts
-const result = await assistant.run('Explain the difference between recall and precision.');
+const result = await assistant.run('Summarise vector databases in one sentence.');
 
-console.log(result.text);
-console.log(result.runId);
-console.log(result.sessionId);
+console.log(result.text);           // string — the agent's response
+console.log(result.runId);          // string — unique run identifier
+console.log(result.sessionId);      // string — current session ID
+console.log(result.steps);          // number — total steps (including tool calls)
+console.log(result.finishReason);   // 'stop' | 'tool_calls' | 'length' | 'error'
+console.log(result.usage);          // { inputTokens, outputTokens, totalTokens }
 ```
 
-`run()` is the default request-response path. Use it for server handlers, jobs, and tests.
+**`run()` options:**
 
-### Streaming
+```ts
+await assistant.run('Your message', {
+  sessionId: 'sess-001',       // continue an existing session
+  userId: 'user-42',           // attach user identity to the run
+  runId: 'my-run-id',          // provide a deterministic run ID
+  traceId: 'trace-abc',        // correlation ID for distributed tracing
+  context: { tenantId: 'acme' }, // arbitrary metadata passed through hooks
+});
+```
+
+---
+
+## `agent.stream()` — streaming tokens
+
+Use `stream()` when the user should see tokens arrive incrementally.
 
 ```ts
 for await (const chunk of assistant.stream('Explain TypeScript project references.')) {
@@ -71,64 +142,174 @@ for await (const chunk of assistant.stream('Explain TypeScript project reference
 }
 ```
 
-Use `stream()` when the user should see tokens arrive incrementally.
+`stream()` accepts the same options as `run()`.
 
-## Typed Agent Builder
+---
 
-Use `defineAgent()` when the call boundary matters as much as the text output.
+## Retry configuration
+
+```ts
+const agent = createAgent({
+  name: 'resilient',
+  model: 'gpt-4o-mini',
+  apiKey: process.env.OPENAI_API_KEY!,
+  instructions: 'You are a concise assistant.',
+  retry: {
+    maxRetries: 3,         // retry up to 3 times on rate limit or network errors
+    backoffMs: 500,        // initial delay between retries
+    maxBackoffMs: 10_000,  // maximum retry delay
+  },
+  timeoutMs: 30_000,       // abort the run if it takes more than 30 seconds
+});
+```
+
+---
+
+## Budget controls
+
+```ts
+const agent = createAgent({
+  name: 'budget-agent',
+  model: 'gpt-4o',
+  apiKey: process.env.OPENAI_API_KEY!,
+  instructions: 'Answer concisely.',
+  budget: {
+    maxTokensPerRun: 2_000,  // hard cap on tokens for a single run
+    maxUsdPerDay: 10.00,     // cumulative spend cap per day
+  },
+});
+```
+
+When a budget is exceeded, the agent throws `BudgetExceededError`.
+
+---
+
+## Lifecycle hooks
+
+```ts
+const agent = createAgent({
+  name: 'observed',
+  model: 'gpt-4o-mini',
+  apiKey: process.env.OPENAI_API_KEY!,
+  instructions: 'You are a concise assistant.',
+  hooks: {
+    beforeRun:       (prompt, config) => { console.log('[start]', config.runId); return prompt; },
+    afterRun:        (result)         => { console.log('[finish]', result.usage); return result; },
+    beforeToolCall:  async (name, args, step)          => { console.log('[tool:start]', name); return args; },
+    afterToolCall:   async (name, result, _args, step) => { console.log('[tool:end]', name); return result; },
+    buildSystemPrompt: (instructions, ragContext)      => [instructions, ragContext].filter(Boolean).join('\n\n'),
+    onError:         (error, step)    => { console.error('[error]', error.message); },
+  },
+});
+```
+
+See the [Observability example](../examples/12-observability) for a full walkthrough.
+
+---
+
+## `defineAgent()` — typed input/output
+
+Use `defineAgent()` when the agent sits behind a typed API boundary, workflow step, or internal SDK.
 
 ```ts
 import { defineAgent } from 'confused-ai';
 import { z } from 'zod';
 
-const qa = defineAgent('qa')
-  .model('openai:gpt-4o-mini')
-  .input(z.object({ question: z.string() }))
-  .output(z.object({ answer: z.string() }))
-  .instructions('Answer clearly and briefly.')
+const classifier = defineAgent('classifier')
+  .model('gpt-4o-mini')
+  .apiKey(process.env.OPENAI_API_KEY!)
+  .input(z.object({ text: z.string() }))
+  .output(z.object({
+    category: z.enum(['billing', 'technical', 'general']),
+    confidence: z.number(),
+  }))
+  .instructions('Classify the support request. Return JSON with category and confidence (0–1).')
   .build();
 
-const result = await qa.run({ question: 'What does idempotent mean in an API?' });
-console.log(result.answer);
+const result = await classifier.run({ text: 'My invoice shows the wrong amount.' });
+console.log(result.category);    // → 'billing'
+console.log(result.confidence);  // → 0.95
 ```
 
-This is the cleanest pattern when your agent sits behind an HTTP contract, workflow step, or internal SDK.
+The output schema is validated on every run. Use this pattern for agent-to-agent calls, API handlers, and pipeline stages where the shape of the output matters.
 
-## Factory Style
+---
 
-`createAgent()` exposes the more explicit factory surface directly.
+## `bare()` — minimal agent
+
+`bare()` creates an agent with no default sessions, no guardrails, and minimal wiring. Ideal for `compose()` pipelines, tests, and background workers.
+
+```ts
+import { bare } from 'confused-ai';
+
+const worker = bare({
+  name: 'worker',
+  instructions: 'Process the input and return a structured result.',
+  llm: myLlmAdapter,   // any object with a generateText() method
+  tools: false,
+  maxSteps: 1,
+});
+
+const result = await worker.run('Summarise this text: ...');
+console.log(result.text);
+```
+
+`bare()` accepts the same `AgentConfig` shape but has no auto-wired defaults.
+
+---
+
+## Custom LLM provider
+
+Pass any object implementing `{ generateText(messages): Promise<{ text, finishReason }> }` as `llm`:
 
 ```ts
 import { createAgent } from 'confused-ai';
 
-const assistant = createAgent({
-  name: 'assistant',
-  model: 'openai:gpt-4o-mini',
-  instructions: 'You are a concise assistant.',
-  tools: [],
+const myProvider = {
+  async generateText(messages: Array<{ role: string; content: unknown }>) {
+    // call any LLM API here
+    return { text: 'My response', finishReason: 'stop' as const };
+  },
+};
+
+const agent = createAgent({
+  name: 'custom-llm-agent',
+  instructions: 'You are an assistant.',
+  llm: myProvider,
+  tools: false,
   sessionStore: false,
   guardrails: false,
 });
 ```
 
-Prefer `agent()` when you are writing docs, tutorials, or new app code. Reach for `createAgent()` when the explicit factory name communicates intent better in your codebase.
+For multi-provider routing, pass an `LLMRouter` from `createSmartRouter()` or similar factory.
 
-## Usage Patterns
+---
 
-### Per-request agents
+## `AgentResult` — run output shape
 
-Create the agent near the request boundary when you want isolation, tenant scoping, or request-level configuration.
+```ts
+interface AgentResult {
+  text: string;                // final text response
+  runId: string;               // unique run identifier
+  sessionId: string;           // session this run belongs to
+  steps: number;               // total steps including tool calls
+  finishReason: 'stop' | 'tool_calls' | 'length' | 'error';
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
+}
+```
 
-### Long-lived assistants
+---
 
-Add `sessionStore` and optional `knowledgebase` when you want continuity across turns.
+## Where to go next
 
-### Production wrappers
-
-Wrap the agent with `withResilience()` from `confused-ai/production` when you want rate limits, retries, circuit breakers, approvals, or audit trails without changing the core authoring flow.
-
-## Related APIs
-
-- [tool() / defineTool()](./tools)
-- [KnowledgeEngine / createKnowledgeEngine()](./knowledge)
-- [Workflow / Orchestration](./orchestration)
+- [Tools API](./tools) — `tool()`, `extendTool()`, `wrapTool()`, and MCP
+- [Knowledge API](./knowledge) — `createKnowledgeEngine()` and retrieval
+- [Storage API](./storage) — `createStorage()` for durable state
+- [Orchestration API](./orchestration) — `createTeam()` and `createSupervisor()`
+- [01 · Hello World](../examples/01-hello-world) — minimal agent example
+- [15 · Full-Stack App](../examples/15-full-stack) — all options wired together

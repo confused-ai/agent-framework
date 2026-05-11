@@ -1,47 +1,190 @@
 ---
 title: Sessions
-description: Keep conversations continuous across runs and choose the right moment to add session persistence to an agent workflow.
+description: Keep conversations continuous across runs with InMemorySessionStore, SQLite, Redis, Postgres, or DbSessionStore. Multi-turn chat, session IDs, message history.
 outline: [2, 3]
 ---
 
 # Sessions
 
-Sessions are the continuity layer for conversational systems. They let an agent recognize that multiple runs belong to the same ongoing interaction instead of treating every prompt as a brand-new request.
+Sessions let an agent remember the thread of a conversation across multiple `run()` calls. Pass a `sessionId` and a `sessionStore` and the framework automatically loads and appends message history.
 
-## When sessions matter
+```ts
+import {
+  createInMemoryStore,
+  createSqliteStore,
+  createRedisStore,
+  DbSessionStore,
+  FallbackSessionStore,
+  createFallbackSessionStore,
+} from 'confused-ai';
+```
 
-Add sessions when the agent needs to remember the flow of a conversation across turns, such as:
+---
 
-- chat interfaces
-- support flows that span several steps
-- review or approval loops that resume later
-- systems where the user expects the agent to know what just happened
+## Quick start
 
-If every request is independent, you may not need sessions at all.
+```ts
+import { createAgent, createInMemoryStore } from 'confused-ai';
 
-## What sessions are responsible for
+const sessionStore = createInMemoryStore();
 
-Sessions track conversation continuity. They are not the same as retrieval, memory, or generic storage.
+const agent = createAgent({
+  name: 'chat',
+  instructions: 'You are a helpful assistant.',
+  model: 'gpt-4o-mini',
+  apiKey: process.env.OPENAI_API_KEY!,
+  sessionStore,
+});
 
-- sessions preserve the thread of the interaction
-- memory preserves selected facts or history beyond a single conversation shape
-- knowledge provides retrieval-backed source material
-- storage handles broader application state
+// Turn 1
+await agent.run('My name is Alice.', { sessionId: 'session-1' });
 
-Keeping those boundaries clear makes the runtime much easier to reason about.
+// Turn 2 — agent remembers the name
+const result = await agent.run('What is my name?', { sessionId: 'session-1' });
+console.log(result.text); // "Your name is Alice."
+```
 
-## Recommended rollout
+---
 
-1. Start with an in-memory session store while the conversation design is still changing.
-2. Decide how session identifiers are created and passed through the application.
-3. Add persistence only after the continuity model is behaving the way you expect.
-4. Make sure session identifiers are easy to inspect during debugging.
+## Session stores
 
-## Design guideline
+### InMemorySessionStore (development)
 
-Treat the session boundary as part of the user experience. If the session model is vague, the conversation will feel inconsistent even when the agent itself is otherwise good.
+Fast, zero-config. Sessions are lost on restart.
+
+```ts
+import { createInMemoryStore } from 'confused-ai';
+
+const store = createInMemoryStore({
+  retentionDays: 7,  // evict sessions older than 7 days
+});
+
+// Direct store access
+const session = await store.create({ agentId: 'chat', userId: 'user-1' });
+await store.appendMessage(session.id, { role: 'user', content: 'Hello' });
+const messages = await store.getMessages(session.id);
+await store.delete(session.id);
+
+// Prune expired sessions manually
+const deleted = store.pruneExpired();
+console.log(`Pruned ${deleted} sessions`);
+```
+
+### SQLite (single-node production)
+
+Durable sessions on disk — no external server needed:
+
+```ts
+import { createSqliteStore } from 'confused-ai';
+
+const store = createSqliteStore({
+  path: './data/sessions.db',  // defaults to ':memory:' if omitted
+});
+```
+
+### Redis (distributed, horizontally scalable)
+
+```ts
+import { createRedisStore } from 'confused-ai';
+
+const store = createRedisStore({
+  redis: process.env.REDIS_URL!,   // 'redis://localhost:6379' or ioredis options
+  keyPrefix: 'myapp:session:',     // namespacing
+  ttlSeconds: 86_400,              // 24-hour TTL
+});
+```
+
+### DbSessionStore (any AgentDb backend)
+
+```ts
+import { DbSessionStore } from 'confused-ai';
+import { SqliteAgentDb, PostgresAgentDb } from 'confused-ai';
+
+// SQLite
+const db = new SqliteAgentDb({ path: './agent.db' });
+const store = new DbSessionStore(db);
+
+// Postgres
+const pgDb = new PostgresAgentDb({ connectionString: process.env.DATABASE_URL! });
+const pgStore = new DbSessionStore(pgDb);
+```
+
+### FallbackSessionStore (resilient)
+
+Use a primary store (Redis/Postgres) with automatic in-memory fallback if it goes down:
+
+```ts
+import { createFallbackSessionStore, createRedisStore } from 'confused-ai';
+
+const store = createFallbackSessionStore(
+  createRedisStore({ redis: process.env.REDIS_URL! }),
+  {
+    fallback: 'in-memory',
+    onFallback: (err) => logger.warn('Session store degraded, using fallback', err),
+    onRecover: () => logger.info('Session store recovered'),
+  },
+);
+
+// Check degraded state
+if (store.isDegraded()) {
+  metrics.increment('session.store.degraded');
+}
+
+// Force re-check primary (call after your infra team fixes the issue)
+store.recover();
+```
+
+---
+
+## SessionStore interface
+
+```ts
+interface SessionStore {
+  get(id: string): Promise<SessionData | undefined>;
+  create(data: { agentId: string; userId?: string; messages?: SessionMessage[] } | string): Promise<SessionData>;
+  update(id: string, data: { messages: SessionMessage[] }): Promise<void>;
+  getMessages(id: string): Promise<SessionMessage[]>;
+  appendMessage(id: string, message: SessionMessage): Promise<void>;
+  delete(id: string): Promise<void>;
+}
+```
+
+---
+
+## Session IDs from your own system
+
+You control the session ID — use any string that makes sense in your application:
+
+```ts
+// From an HTTP request
+const sessionId = req.headers['x-session-id'] ?? crypto.randomUUID();
+
+// From a database row
+const sessionId = `order-${orderId}`;
+
+// From a user ID for a single long-running conversation
+const sessionId = `user-${userId}-chat`;
+
+const result = await agent.run(prompt, { sessionId, userId });
+```
+
+---
+
+## Read conversation history
+
+```ts
+const messages = await sessionStore.getMessages('session-1');
+// [{ role: 'user', content: '...' }, { role: 'assistant', content: '...' }, ...]
+
+// Get the full session object (metadata + messages)
+const session = await sessionStore.get('session-1');
+console.log(session?.createdAt, session?.updatedAt);
+```
+
+---
 
 ## Where to go next
 
-- Read `memory.md` if the system should retain facts beyond ordinary conversation flow.
-- Read `storage.md` if you also need durable application state around the agent.
+- [Memory](./memory) — retain facts beyond ordinary conversation flow.
+- [Storage](./storage) — durable application state around the agent.
+- [HITL](./hitl) — pause a session to wait for human approval.

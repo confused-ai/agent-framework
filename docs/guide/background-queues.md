@@ -1,36 +1,214 @@
 ---
 title: Background Queues
-description: Use queues when agent work should run asynchronously, survive transient failures, or be processed away from the request path.
+description: Dispatch agent hooks and async work to BullMQ, Kafka, RabbitMQ, Redis Pub/Sub, SQS, or in-memory queues with the BackgroundQueue interface and queueHook helper.
 outline: [2, 3]
 ---
 
 # Background Queues
 
-Background queues are the right runtime when an agent job should not block an interactive request. They move work out of the foreground path and make retries, delayed processing, and worker-based execution possible.
+Background queues let agent hooks and long-running work execute outside the main request path — with retries, persistence, and worker-based consumption. The interface is uniform across all backends.
 
-## Good fits for queues
+```ts
+import {
+  InMemoryBackgroundQueue,
+  BullMQBackgroundQueue,
+  KafkaBackgroundQueue,
+  RabbitMQBackgroundQueue,
+  RedisPubSubBackgroundQueue,
+  SQSBackgroundQueue,
+  queueHook,
+} from 'confused-ai';
+```
 
-Use a queue when:
+---
 
-- the task may take longer than a user request should wait
-- the work should be retried independently of the caller
-- the system should process many jobs through one or more workers
-- the caller only needs to know that work was accepted, not completed immediately
+## Quick start
 
-## Queue versus scheduler
+```ts
+import { createAgent } from 'confused-ai';
+import { InMemoryBackgroundQueue, queueHook } from 'confused-ai';
 
-Use a queue for event-driven or externally triggered async work.
+// In-memory queue — no dependencies, good for dev/test
+const queue = new InMemoryBackgroundQueue({ concurrency: 5 });
 
-Use the scheduler for time-based recurring work.
+const agent = createAgent({
+  name: 'analytics-agent',
+  instructions: 'Help users with their questions.',
+  model: 'gpt-4o-mini',
+  apiKey: process.env.OPENAI_API_KEY!,
+  hooks: {
+    // Dispatch post-run analytics to the queue without blocking the response
+    afterRun: queueHook(queue, 'analytics', (result) => ({
+      steps:  result.steps,
+      tokens: result.usage?.totalTokens,
+      runId:  result.runId,
+    })),
+  },
+});
 
-## Recommended rollout
+// Register the worker handler (same or separate process)
+await queue.consume('analytics', async (task) => {
+  await analyticsService.track('agent.run', task.payload);
+});
 
-1. Start with one job type and one worker boundary.
-2. Keep the payload shape explicit.
-3. Make retries and failure handling observable.
-4. Add concurrency or more job types after the first path is stable.
+const result = await agent.run('Help me track my order.');
+// The afterRun hook fires the task to the queue and returns immediately
+```
+
+---
+
+## Queue backends
+
+### `InMemoryBackgroundQueue` (development / testing)
+
+```ts
+import { InMemoryBackgroundQueue } from 'confused-ai';
+
+const queue = new InMemoryBackgroundQueue({ concurrency: 3 });
+```
+
+### `BullMQBackgroundQueue` — Redis-backed, durable
+
+```bash
+bun add bullmq
+```
+
+```ts
+import { BullMQBackgroundQueue } from 'confused-ai';
+
+const queue = new BullMQBackgroundQueue({
+  queueName: 'agent-hooks',
+  connection: { host: 'localhost', port: 6379 },
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 1_000 },
+    removeOnComplete: 100,
+    removeOnFail: 500,
+  },
+});
+
+// Worker (same or separate process)
+await queue.consume('afterRun', async (task) => {
+  await saveToDb(task.payload);
+}, { concurrency: 5 });
+```
+
+### `KafkaBackgroundQueue` — high-throughput, ordered, replay
+
+```bash
+bun add kafkajs
+```
+
+```ts
+import { KafkaBackgroundQueue } from 'confused-ai';
+
+const queue = new KafkaBackgroundQueue({
+  brokers: ['kafka:9092'],
+  topic: 'agent-hooks',
+  clientId: 'my-agent-app',
+  groupId: 'agent-workers',
+});
+```
+
+### `RabbitMQBackgroundQueue` — AMQP, dead-letter exchanges
+
+```bash
+bun add amqplib
+```
+
+```ts
+import { RabbitMQBackgroundQueue } from 'confused-ai';
+
+const queue = new RabbitMQBackgroundQueue({
+  url: process.env.RABBITMQ_URL!,
+  queue: 'agent-hooks',
+  exchange: 'agent',
+  routingKey: 'hook',
+});
+```
+
+### `RedisPubSubBackgroundQueue` — lightweight fanout
+
+```ts
+import { RedisPubSubBackgroundQueue } from 'confused-ai';
+
+const queue = new RedisPubSubBackgroundQueue({
+  redis: process.env.REDIS_URL!,
+  channel: 'agent-hooks',
+});
+```
+
+### `SQSBackgroundQueue` — AWS managed, serverless
+
+```bash
+bun add @aws-sdk/client-sqs
+```
+
+```ts
+import { SQSBackgroundQueue } from 'confused-ai';
+
+const queue = new SQSBackgroundQueue({
+  queueUrl: process.env.SQS_QUEUE_URL!,
+  region: 'us-east-1',
+});
+```
+
+---
+
+## `BackgroundQueue` interface
+
+Implement this to add any backend:
+
+```ts
+interface BackgroundQueue {
+  readonly name: string;
+
+  enqueue<T>(type: string, payload: T, options?: EnqueueOptions): Promise<BackgroundTask<T>>;
+
+  consume<T>(
+    type: string,
+    handler: (task: BackgroundTask<T>) => Promise<void> | void,
+    options?: WorkerOptions,
+  ): Promise<void>;
+
+  close?(): Promise<void>;
+}
+```
+
+---
+
+## `queueHook` — hook → queue dispatch
+
+`queueHook` turns any agent lifecycle hook into a fire-and-forget queue dispatch:
+
+```ts
+import { queueHook } from 'confused-ai';
+
+const hooks = {
+  afterRun:     queueHook(queue, 'run-complete',   (result) => ({ text: result.text, tokens: result.usage?.totalTokens })),
+  afterToolCall: queueHook(queue, 'tool-call-log', (name, result, args) => ({ name, args, result })),
+};
+```
+
+---
+
+## Enqueue manually
+
+```ts
+// Fire a background task directly (without a hook)
+const task = await queue.enqueue('send-report', {
+  userId: 'user-42',
+  reportType: 'weekly',
+}, {
+  delay: 5_000,     // delay 5 seconds (BullMQ, Kafka support this)
+  retries: 3,
+});
+```
+
+---
 
 ## Where to go next
 
-- Read `scheduler.md` for recurring, time-based execution.
-- Read `production.md` for operational runtime guidance.
+- [Scheduler](./scheduler) — time-based recurring execution.
+- [Hooks](./hooks) — lifecycle hooks where queue dispatch originates.
+- [Production](./production) — circuit breakers and graceful shutdown.

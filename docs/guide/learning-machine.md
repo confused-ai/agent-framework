@@ -1,34 +1,151 @@
 ---
 title: Learning Machine
-description: Build feedback loops deliberately so the system improves in understandable ways instead of becoming a black box that mutates without clear control.
+description: Coordinate multiple memory stores (user profile, session context, entity memory, learned knowledge, decision logs) via LearningMachine. Build adaptive agents that improve across runs.
 outline: [2, 3]
 ---
 
 # Learning Machine
 
-The learning layer is about using feedback, retained signals, or evaluation outcomes to improve the system over time. It is most useful when the system should adapt, but still remain inspectable.
+`LearningMachine` coordinates multiple memory store types under a single API. It retrieves relevant context before each LLM call and extracts new learnings after each turn — keeping agents adaptive without making the system opaque.
 
-## When learning is worth it
+```ts
+import { LearningMachine } from 'confused-ai';
+```
 
-Learning becomes valuable when:
+---
 
-- the same class of task repeats often enough to justify adaptation
-- feedback can be captured in a structured way
-- there is a reliable signal for what counts as improvement
+## Quick start
 
-## Start with explicit feedback loops
+```ts
+import { LearningMachine } from 'confused-ai';
+import { SqliteAgentDb } from 'confused-ai';
+import { createAgent } from 'confused-ai';
 
-Do not begin with broad automatic adaptation. Start with one narrow loop where you can explain:
+const db = new SqliteAgentDb({ path: './agent.db' });
 
-- what feedback is collected
-- what changes because of that feedback
-- how you know the change helped
+// All five stores auto-created using the db backend
+const machine = new LearningMachine({ db });
 
-## Design guideline
+const agent = createAgent({
+  name: 'adaptive-assistant',
+  instructions: 'Help users. Use your memory to personalise responses.',
+  model: 'gpt-4o-mini',
+  apiKey: process.env.OPENAI_API_KEY!,
+  hooks: {
+    buildSystemPrompt: async (base, ctx) => {
+      // Inject remembered context into every run
+      const memory = await machine.buildContext({
+        userId:    ctx.userId,
+        sessionId: ctx.sessionId,
+        message:   ctx.prompt,
+      });
+      return memory ? `${base}\n\n${memory}` : base;
+    },
+    afterRun: async (result) => {
+      // Extract and persist new learnings from this turn
+      await machine.process(result.messages, {
+        userId:    result.userId,
+        sessionId: result.sessionId,
+      });
+      return result;
+    },
+  },
+});
+```
 
-Learning should improve the system without making it mysterious. If a behavior changed and the team cannot explain why, the learning loop is too opaque.
+---
+
+## Store types
+
+Each store is opt-in — use only what the task requires:
+
+| Store | Purpose |
+|---|---|
+| `userProfile` | Structured user attributes (name, preferences, language) |
+| `userMemory` | Unstructured user memories (free-text facts per user) |
+| `sessionContext` | Per-session summary, current goal, and plan |
+| `entityMemory` | Memories about companies, projects, people (named entities) |
+| `learnedKnowledge` | Reusable insights and patterns across all users |
+| `decisionLog` | Log of agent decisions for auditability and reflection |
+
+---
+
+## `LearningMachine` API
+
+```ts
+// Build a context string to inject into the system prompt
+const context = await machine.buildContext({
+  userId: 'user-42',
+  sessionId: 'sess-xyz',
+  message: 'What were we working on last time?',
+  namespace: 'default',     // optional: scope entity/knowledge queries
+});
+
+// Raw recall — returns one key per store (useful for inspection/testing)
+const recalled = await machine.recall({ userId: 'user-42', sessionId: 'sess-xyz' });
+// recalled.userProfile, recalled.userMemory, recalled.sessionContext...
+
+// Process a completed turn and persist learnings
+await machine.process(messages, {
+  userId: 'user-42',
+  sessionId: 'sess-xyz',
+});
+
+// Get callable tools the agent can use to update its own memory
+const tools = await machine.getTools({ userId: 'user-42' });
+// Returns: [save_user_memory, update_session_goal, remember_entity, ...]
+```
+
+---
+
+## `LearningMachineConfig`
+
+```ts
+interface LearningMachineConfig {
+  /** Structured user profile store */
+  userProfile?: UserProfileStore;
+  /** Unstructured user memory store */
+  userMemory?: UserMemoryStore;
+  /** Per-session context store */
+  sessionContext?: SessionContextStore;
+  /** Entity memory store */
+  entityMemory?: EntityMemoryStore;
+  /** Learned knowledge store */
+  learnedKnowledge?: LearnedKnowledgeStore;
+  /** Decision log store */
+  decisionLog?: DecisionLogStore;
+  /** Optional db backend — any unspecified store is auto-created */
+  db?: AgentDb;
+  /** Default namespace for entity/knowledge stores (default: 'global') */
+  namespace?: string;
+  debug?: boolean;
+}
+```
+
+---
+
+## Self-updating memory tools
+
+Give the agent tools to update its own memory during a run:
+
+```ts
+const machine = new LearningMachine({ db });
+
+const memoryTools = await machine.getTools({ userId: 'user-42' });
+
+const agent = createAgent({
+  name: 'personal-assistant',
+  instructions: 'Help the user. Use memory tools to save important facts.',
+  model: 'gpt-4o',
+  apiKey: process.env.OPENAI_API_KEY!,
+  tools: memoryTools,   // agent can call save_user_memory, remember_entity, etc.
+});
+```
+
+---
 
 ## Where to go next
 
-- Read `eval.md` for measuring improvement.
-- Read `memory.md` when the main need is retention rather than adaptation.
+- [Memory](./memory) — underlying memory stores (InMemoryMemoryStore, DbMemoryStore).
+- [Session](./session) — session continuity underlying `sessionContext`.
+- [Eval](./eval) — measure whether learning is improving outcomes.

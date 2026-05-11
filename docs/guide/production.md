@@ -1,36 +1,311 @@
 ---
 title: Production
-description: Move from a useful local agent to a reliable service by adding runtime controls in the right order.
+description: CircuitBreaker, RateLimiter, BudgetEnforcer, HealthCheckManager, GracefulShutdown, checkpointing, idempotency, audit logs, and the ResilientAgent wrapper for production-grade agent deployments.
 outline: [2, 3]
 ---
 
 # Production
 
-Production work begins after the core agent behavior is already correct. The goal here is not to change what the agent does. The goal is to make the agent safe, observable, and reliable in a real runtime.
+The production package wraps the agent runtime with resilience, observability, and control-plane primitives. Everything is pluggable and composable — add only what you need.
 
-## What production usually adds
+```ts
+import {
+  CircuitBreaker, createLLMCircuitBreaker,
+  RateLimiter, createOpenAIRateLimiter,
+  BudgetEnforcer, InMemoryBudgetStore,
+  HealthCheckManager, createLLMHealthCheck,
+  GracefulShutdown, createGracefulShutdown,
+  ResilientAgent, withResilience,
+  InMemoryAuditStore, SqliteAuditStore,
+  InMemoryIdempotencyStore, SqliteIdempotencyStore,
+  SqliteCheckpointStore,
+} from 'confused-ai';
+```
 
-Common production layers include:
+---
 
-- serving and delivery boundaries
-- retries, rate limits, and circuit breakers
-- approvals and policy checks
-- budgets, tracing, and evaluation
-- persistence for sessions, memory, or durable outputs
+## `ResilientAgent` — all-in-one wrapper
 
-## Recommended rollout
+The fastest way to get production resilience — wraps a `createAgent()` agent with circuit breaker, rate limiter, budget enforcement, checkpointing, and idempotency:
 
-1. Validate the core behavior locally.
-2. Add serving or job execution boundaries.
-3. Add resilience and runtime controls.
-4. Add observability and evaluation before traffic grows.
-5. Add approvals or stricter policies where the risk justifies them.
+```ts
+import { createAgent } from 'confused-ai';
+import { withResilience, createSqliteApprovalStore } from 'confused-ai';
 
-## Design guideline
+const agent = createAgent({
+  name: 'production-agent',
+  instructions: 'You are a customer service assistant.',
+  model: 'gpt-4o-mini',
+  apiKey: process.env.OPENAI_API_KEY!,
+});
 
-Do not use production wrappers to hide an unclear agent design. They work best when the core task, tool boundaries, and context model are already solid.
+const resilientAgent = withResilience(agent, {
+  circuitBreaker: {
+    name: 'openai',
+    failureThreshold: 5,      // open after 5 failures
+    resetTimeoutMs: 30_000,   // retry after 30s
+  },
+  rateLimiter: {
+    name: 'openai',
+    maxRequests: 60,
+    intervalMs: 60_000,
+    burstCapacity: 10,
+  },
+  budget: {
+    maxUsdPerRun: 0.50,
+    maxUsdPerUser: 10.00,
+    maxUsdPerMonth: 500.00,
+    onExceeded: 'throw',
+  },
+  checkpoint: new SqliteCheckpointStore({ path: './agent.db' }),
+  idempotency: new SqliteIdempotencyStore({ path: './agent.db' }),
+});
+
+// Use exactly like a regular agent
+const result = await resilientAgent.run('Help me with my order.', {
+  sessionId: 'session-1',
+  userId: 'user-42',
+  runId: 'run-abc',       // used for idempotency
+});
+```
+
+---
+
+## Circuit breaker
+
+Prevent cascading failures by temporarily stopping calls to a failing dependency:
+
+```ts
+import { CircuitBreaker, CircuitState, createLLMCircuitBreaker } from 'confused-ai';
+
+// Factory for LLM circuit breakers (pre-configured sensible defaults)
+const cb = createLLMCircuitBreaker('openai', {
+  failureThreshold: 5,
+  resetTimeoutMs: 30_000,
+  onStateChange: (from, to) => {
+    console.log(`Circuit: ${from} → ${to}`);
+    if (to === CircuitState.OPEN) alert('OpenAI circuit opened!');
+  },
+});
+
+// Wrap any async operation
+const result = await cb.execute(async () => {
+  return await openai.chat(messages);
+});
+
+console.log(cb.getState());  // CLOSED | OPEN | HALF_OPEN
+console.log(cb.getMetrics()); // { totalCalls, failures, successes, lastFailure }
+```
+
+---
+
+## Rate limiter
+
+Token-bucket rate limiting for external APIs:
+
+```ts
+import { RateLimiter, createOpenAIRateLimiter, RateLimitError } from 'confused-ai';
+
+// Factory for OpenAI (Tier 1 defaults: 60 RPM + 10 burst)
+const limiter = createOpenAIRateLimiter();
+
+// Custom
+const limiter2 = new RateLimiter({
+  name: 'anthropic',
+  maxRequests: 20,
+  intervalMs: 60_000,
+  burstCapacity: 5,
+  overflowMode: 'queue',     // 'reject' (default) | 'queue'
+  maxQueueSize: 100,
+  maxQueueWaitMs: 30_000,
+});
+
+try {
+  await limiter.acquire();
+  const result = await callOpenAI();
+  limiter.release();
+} catch (err) {
+  if (err instanceof RateLimitError) {
+    console.log(`Rate limited. Retry after ${err.retryAfterMs}ms`);
+  }
+}
+```
+
+## Redis rate limiter (distributed)
+
+```ts
+import { RedisRateLimiter } from 'confused-ai';
+
+const limiter = new RedisRateLimiter({
+  redis: process.env.REDIS_URL!,
+  name: 'openai',
+  maxRequests: 60,
+  intervalMs: 60_000,
+});
+```
+
+---
+
+## Budget enforcement
+
+Hard stop on LLM spend per run, per user, and per month:
+
+```ts
+import { BudgetEnforcer, InMemoryBudgetStore, BudgetExceededError, estimateCostUsd } from 'confused-ai';
+
+const budget = new BudgetEnforcer({
+  maxUsdPerRun: 0.50,
+  maxUsdPerUser: 10.00,
+  maxUsdPerMonth: 500.00,
+  onExceeded: 'throw',   // 'throw' | 'warn' | 'truncate'
+  store: new InMemoryBudgetStore(),
+});
+
+// Estimate before running
+const estimatedCost = estimateCostUsd('gpt-4o-mini', { promptTokens: 1_000, completionTokens: 500 });
+
+try {
+  await budget.checkAndReserve({ userId: 'user-42', estimatedUsd: estimatedCost });
+  const result = await agent.run(prompt);
+  await budget.commit({ userId: 'user-42', actualUsd: result.usage?.totalCost ?? 0 });
+} catch (err) {
+  if (err instanceof BudgetExceededError) {
+    return { error: 'Monthly budget exceeded.' };
+  }
+}
+```
+
+---
+
+## Health checks
+
+```ts
+import {
+  HealthCheckManager, HealthStatus,
+  createLLMHealthCheck,
+  createSessionStoreHealthCheck,
+  createHttpHealthCheck,
+  createCustomHealthCheck,
+} from 'confused-ai';
+
+const health = new HealthCheckManager({
+  checks: [
+    createLLMHealthCheck('openai', openaiProvider),
+    createSessionStoreHealthCheck('redis', redisSessionStore),
+    createHttpHealthCheck('db-api', 'https://api.internal/health'),
+    createCustomHealthCheck('queue', async () => {
+      const lag = await queue.getLag();
+      return lag < 1000 ? { status: HealthStatus.HEALTHY } : { status: HealthStatus.DEGRADED };
+    }),
+  ],
+  intervalMs: 30_000,
+});
+
+const report = await health.check();
+console.log(report);
+// { status: 'healthy', components: { openai: 'healthy', redis: 'healthy', ... } }
+
+// Expose as HTTP endpoint
+app.get('/health', async (req, res) => {
+  const report = await health.check();
+  res.status(report.status === 'healthy' ? 200 : 503).json(report);
+});
+```
+
+---
+
+## Graceful shutdown
+
+```ts
+import { createGracefulShutdown, withShutdownGuard } from 'confused-ai';
+
+const shutdown = createGracefulShutdown({
+  timeoutMs: 30_000,
+  onShutdown: (event) => logger.info('Shutting down', event),
+});
+
+// Register cleanup handlers
+shutdown.register('session-store', () => sessionStore.flush());
+shutdown.register('queue', () => queue.drain());
+shutdown.register('http-server', () => server.close());
+
+// Guard long-running operations against premature termination
+const safeRun = withShutdownGuard(shutdown, async () => {
+  return agent.run(prompt);
+});
+```
+
+---
+
+## Audit logs
+
+```ts
+import { SqliteAuditStore, createSqliteAuditStore } from 'confused-ai';
+
+const auditStore = createSqliteAuditStore('./agent.db');
+
+// Log a run
+await auditStore.append({
+  runId: 'run-123',
+  userId: 'user-42',
+  agentName: 'billing-agent',
+  prompt: userPrompt,
+  response: result.text,
+  toolCalls: result.toolCalls,
+  durationMs: 420,
+  tokens: result.usage?.totalTokens,
+});
+
+// Query audit trail
+const entries = await auditStore.query({
+  userId: 'user-42',
+  from: new Date('2026-05-01'),
+  to: new Date('2026-05-31'),
+  limit: 100,
+});
+```
+
+---
+
+## Idempotency (exactly-once runs)
+
+Prevent duplicate runs from retried HTTP requests:
+
+```ts
+import { SqliteIdempotencyStore } from 'confused-ai';
+
+const idempotency = new SqliteIdempotencyStore({ path: './agent.db' });
+
+// Pass as runId — the framework deduplicates automatically
+const result = await agent.run(prompt, {
+  runId: req.headers['idempotency-key'] as string,
+  // If a run with this ID already completed, returns the cached result instantly
+});
+```
+
+---
+
+## Cascade delete
+
+Clean up all data associated with a session:
+
+```ts
+import { deleteSession } from 'confused-ai';
+
+await deleteSession({
+  sessionId: 'session-1',
+  sessionStore,
+  memoryStore,
+  checkpointStore,
+  auditStore,
+});
+```
+
+---
 
 ## Where to go next
 
-- Read `observability.md` for visibility and regression workflows.
-- Read `guardrails.md` and `hitl.md` when runtime safety needs stronger controls.
+- [HITL](./hitl) — human approval gates.
+- [Observability](./observability) — tracing, metrics, Langfuse.
+- [Multi-tenancy](./multi-tenancy) — per-tenant isolation.
+- [Example 13: Production](../examples/13-production) — full production setup example.

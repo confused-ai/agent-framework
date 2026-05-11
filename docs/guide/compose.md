@@ -1,35 +1,120 @@
 ---
 title: Compose
-description: Chain deterministic agent stages together when the problem is a sequence, not a team or graph.
+description: Chain agents into linear pipelines with compose() and pipe(). Output of each agent becomes input of the next. Conditional hand-offs with when, output transformation with transform.
 outline: [2, 3]
 ---
 
 # Compose
 
-Composition is the simplest workflow model in the framework. It is what you use when several steps should always run in the same order and each step produces input for the next one.
+`compose()` and `pipe()` chain agents into sequential pipelines. The output text of each agent becomes the prompt for the next. No graph required.
 
-## Why compose first
+```ts
+import { compose, pipe, createAgent } from 'confused-ai';
+```
 
-Many problems that initially look like orchestration are really just fixed pipelines. Composition is easier to test, easier to explain, and usually cheaper to operate.
+---
 
-Examples include:
+## `compose()` — simple pipeline
 
-- summarize, then review, then format
-- classify, then enrich, then write
-- analyze, then recommend, then produce final output
+```ts
+import { createAgent, compose } from 'confused-ai';
 
-## Recommended rollout
+const researcher = createAgent({
+  name: 'researcher',
+  instructions: 'Research topics and return raw findings.',
+  model: 'gpt-4o-mini',
+  apiKey: process.env.OPENAI_API_KEY!,
+});
 
-1. Make each stage runnable on its own.
-2. Compose the stages only after each one is understandable in isolation.
-3. Keep the output boundary between stages explicit.
-4. Escalate to orchestration only when a fixed chain stops being enough.
+const writer = createAgent({
+  name: 'writer',
+  instructions: 'Turn research findings into polished reports.',
+  model: 'gpt-4o',
+  apiKey: process.env.OPENAI_API_KEY!,
+});
 
-## Design guideline
+// Always pass researcher output → writer
+const pipeline = compose(researcher, writer);
+const result = await pipeline.run('Write a report on TypeScript 5.5');
+// result.text — the writer's final output
+```
 
-Composition works best when each stage has one clear job and the entire sequence can be described in one sentence.
+---
+
+## Conditional hand-off
+
+Use `when` to stop the pipeline early:
+
+```ts
+const pipeline = compose(researcher, writer, {
+  // Only hand off to writer if research is substantial
+  when: (result) => result.text.length > 200,
+});
+```
+
+---
+
+## Transform output between stages
+
+Use `transform` to reshape the output before passing it to the next agent:
+
+```ts
+const pipeline = compose(researcher, writer, {
+  transform: (result) => `Here are the research findings:\n\n${result.text}`,
+});
+```
+
+---
+
+## `pipe()` — fluent step-by-step builder
+
+```ts
+import { pipe } from 'confused-ai';
+
+const draft   = createAgent({ name: 'drafter',   instructions: 'Draft a blog post.', ... });
+const editor  = createAgent({ name: 'editor',    instructions: 'Edit for clarity.', ... });
+const publish = createAgent({ name: 'publisher', instructions: 'Format for publication.', ... });
+
+const pipeline = pipe(draft)
+  .then(editor,  { transform: (r) => `Edit this draft:\n\n${r.text}` })
+  .then(publish, { when: (r) => r.text.length > 50 });
+
+const result = await pipeline.run('TypeScript 5.5 features');
+```
+
+---
+
+## Three-stage document pipeline
+
+```ts
+const summarizer = createAgent({ name: 'summarizer', instructions: 'Summarise this document in 3 bullet points.', ... });
+const classifier = createAgent({ name: 'classifier', instructions: 'Classify the document: legal / technical / marketing.', ... });
+const router     = createAgent({ name: 'router',     instructions: 'Given the classification, suggest the right team to handle this.', ... });
+
+const result = await compose(summarizer, classifier, router, {
+  transform: (r, i) => i === 0
+    ? `Summary:\n${r.text}\n\nPlease classify this document.`
+    : r.text,
+}).run('CONTRACT-2024-001.pdf contents...');
+```
+
+---
+
+## When to use `compose` vs graph
+
+| Use case | Use |
+|---|---|
+| Linear, fixed-order pipeline | `compose()` / `pipe()` |
+| Conditional branching | `pipe(...).then(agent, { when })` or [workflow-branching](./workflow-branching) |
+| Cycles, loops, or revisiting stages | [Graph workflows](./graph) |
+| Parallel execution | [Graph workflows](./graph) |
+| Durable checkpointing across process restarts | [Graph workflows](./graph) |
+| Supervisor / consensus / handoff patterns | [Orchestration](./orchestration) |
+
+---
 
 ## Where to go next
 
-- Read `workflows.md` for the broader control-flow model.
-- Read `orchestration.md` when the problem is no longer just a fixed sequence.
+- [Workflow branching](./workflow-branching) — conditional routing between stages.
+- [Graph workflows](./graph) — DAG execution for complex multi-path flows.
+- [Orchestration](./orchestration) — supervisor patterns and agent handoffs.

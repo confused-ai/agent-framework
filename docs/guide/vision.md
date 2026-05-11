@@ -1,26 +1,126 @@
 ---
 title: Vision
-description: Add image understanding when visual inputs should become part of the agent’s reasoning or decision process.
+description: Pass images, files, and audio to agents with imageUrl(), imageFile(), imageBuffer(), and multiModal(). Supports HTTPS URLs, local files, ArrayBuffers, and mixed text+image messages.
 outline: [2, 3]
 ---
 
 # Vision
 
-Vision is the multimodal layer for image understanding. It is useful when the task depends on screenshots, photos, diagrams, or other visual inputs instead of plain text alone.
+Vision lets you pass images, PDFs, and other media to vision-capable models. Use the `multiModal()` helper to combine text prompts with one or more image sources.
 
-## When vision belongs in the design
+```ts
+import {
+  multiModal,
+  imageUrl,
+  imageFile,
+  imageBuffer,
+} from 'confused-ai';
+```
 
-Use it when:
+---
 
-- the important signal is visual
-- the system should classify, extract, or reason over images
-- text alone is not a sufficient representation of the input
+## Pass a remote image
 
-## Design guideline
+```ts
+import { createAgent, multiModal, imageUrl } from 'confused-ai';
 
-Keep the vision boundary explicit. The clearer it is where the image enters the system and how it affects the result, the easier it is to test and improve the pipeline.
+const agent = createAgent({
+  name: 'vision-agent',
+  instructions: 'Analyse the images provided by the user.',
+  model: 'gpt-4o',
+  apiKey: process.env.OPENAI_API_KEY!,
+});
+
+const result = await agent.run(
+  multiModal(
+    'What is in this image?',
+    imageUrl('https://example.com/photo.jpg'),
+  ),
+);
+```
+
+---
+
+## Pass a local file
+
+```ts
+import { multiModal, imageFile } from 'confused-ai';
+
+// imageFile() is async — loads and base64-encodes the file
+const result = await agent.run(
+  multiModal(
+    'Describe this chart.',
+    await imageFile('./chart.png'),
+  ),
+);
+```
+
+---
+
+## Pass a buffer (canvas, upload, fetch response)
+
+```ts
+import { multiModal, imageBuffer } from 'confused-ai';
+
+const response = await fetch('https://example.com/diagram.png');
+const buffer = await response.arrayBuffer();
+
+const result = await agent.run(
+  multiModal(
+    'What does this architecture diagram show?',
+    imageBuffer(buffer, 'image/png'),
+  ),
+);
+```
+
+---
+
+## Multiple images in one message
+
+```ts
+const result = await agent.run(
+  multiModal(
+    'Compare these two screenshots and explain the differences.',
+    imageUrl(beforeUrl),
+    imageUrl(afterUrl),
+  ),
+);
+```
+
+---
+
+## Image detail level
+
+Control quality vs. speed with the `detail` option:
+
+```ts
+imageUrl('https://example.com/photo.jpg', { detail: 'high' })
+imageUrl('https://example.com/thumbnail.jpg', { detail: 'low' })
+// 'auto' (default) — model decides
+```
+
+---
+
+## `ImageSource` types
+
+| Type | Factory | Description |
+|---|---|---|
+| `ImageUrl` | `imageUrl(url, opts?)` | HTTPS or data URI |
+| `ImageFile` | `await imageFile(path, opts?)` | Local file — loaded at call time (Node.js only) |
+| `ImageBuffer` | `imageBuffer(data, mimeType, opts?)` | Raw ArrayBuffer / Uint8Array |
+
+---
+
+## Supported formats
+
+Images: `jpg`, `jpeg`, `png`, `gif`, `webp`, `bmp`, `svg`, `tiff`, `heic`  
+Audio: `mp3`, `wav`, `ogg`, `m4a`, `flac`, `webm`  
+Video: `mp4`, `webm`, `mov`, `avi`, `mkv`
+
+---
 
 ## Where to go next
 
-- Read `video.md` for temporal visual input.
-- Read `voice.md` when the multimodal input is audio-driven instead.
+- [Voice](./voice) — speech input and output.
+- [Video](./video) — process and summarise video content.
+- [Agents](./agents) — `agent.run()` multiModal option.

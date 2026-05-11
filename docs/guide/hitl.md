@@ -1,38 +1,196 @@
 ---
 title: Human In The Loop
-description: Add review or approval checkpoints when an agent should pause for a person instead of acting automatically.
+description: Pause agent execution at high-risk tool calls and wait for a human approval decision using ApprovalStore, waitForApproval, and the built-in HTTP approval endpoint.
 outline: [2, 3]
 ---
 
-# Human In The Loop
+# Human In The Loop (HITL)
 
-Human-in-the-loop design is about deciding when the system should stop and ask for a person instead of continuing automatically. It is most valuable where errors are expensive, irreversible, or sensitive.
+HITL lets an agent pause before performing a high-risk action (send an email, charge a card, delete a record) and wait for a human decision. The approval request is persisted durably so the agent can resume even after a restart.
 
-## When to use it
+```ts
+import {
+  InMemoryApprovalStore,
+  SqliteApprovalStore,
+  createSqliteApprovalStore,
+  waitForApproval,
+  ApprovalRejectedError,
+} from 'confused-ai';
+```
 
-Add a human checkpoint for cases such as:
+---
 
-- external messages or actions that could affect users
-- high-impact updates to systems of record
-- approvals involving security, compliance, or financial risk
-- workflows where expert review is part of the process by design
+## Quick start
 
-## Start simple
+```ts
+import { createAgent, tool } from 'confused-ai';
+import { createSqliteApprovalStore, waitForApproval, ApprovalRejectedError } from 'confused-ai';
+import { z } from 'zod';
 
-The cleanest path is to begin with one approval gate and one clear decision point. Do not build a complicated review network before you know where the true human checkpoint belongs.
+const approvalStore = createSqliteApprovalStore('./agent.db');
 
-## Recommended rollout
+// Wrap a risky tool with an approval gate
+const sendInvoice = tool({
+  name: 'send_invoice',
+  description: 'Send an invoice email to a customer.',
+  schema: z.object({ customerId: z.string(), amount: z.number() }),
+  execute: async ({ customerId, amount }, ctx) => {
+    // Gate: pause here until a human approves
+    await waitForApproval(approvalStore, {
+      runId: ctx.runId!,
+      agentName: 'billing-agent',
+      toolName: 'send_invoice',
+      toolArguments: { customerId, amount },
+      riskLevel: 'high',
+      description: `Send a $${amount} invoice to customer ${customerId}`,
+      timeoutMs: 24 * 60 * 60 * 1000,  // 24 hours
+    });
 
-1. Identify the exact action that should pause.
-2. Add one approval store or review path for that action.
-3. Make the pending state explicit so resume behavior is easy to inspect.
-4. Expand only after the first checkpoint is working clearly.
+    // Only runs after approval
+    await emailService.sendInvoice(customerId, amount);
+    return { sent: true };
+  },
+});
 
-## Design guideline
+const agent = createAgent({
+  name: 'billing-agent',
+  instructions: 'Handle billing and invoicing tasks.',
+  model: 'gpt-4o-mini',
+  apiKey: process.env.OPENAI_API_KEY!,
+  tools: [sendInvoice],
+});
 
-Human review should improve safety and clarity, not create hidden workflow complexity. The person reviewing should understand what they are approving and why the system asked for it.
+try {
+  const result = await agent.run('Send a $500 invoice to customer cust-123.');
+} catch (err) {
+  if (err instanceof ApprovalRejectedError) {
+    console.log('Human rejected the action:', err.comment);
+  }
+}
+```
+
+---
+
+## Approval stores
+
+### InMemoryApprovalStore (testing)
+
+```ts
+import { InMemoryApprovalStore } from 'confused-ai';
+
+const store = new InMemoryApprovalStore();
+```
+
+### SqliteApprovalStore (production)
+
+```ts
+import { createSqliteApprovalStore } from 'confused-ai';
+
+const store = createSqliteApprovalStore('./agent.db');
+```
+
+---
+
+## `ApprovalStore` interface
+
+```ts
+interface ApprovalStore {
+  create(request: Omit<HitlRequest, 'id' | 'status' | 'createdAt' | 'expiresAt'>): Promise<HitlRequest>;
+  get(id: string): Promise<HitlRequest | null>;
+  getByRunId(runId: string): Promise<HitlRequest[]>;
+  decide(id: string, decision: ApprovalDecision): Promise<HitlRequest>;
+  listPending(): Promise<HitlRequest[]>;
+  cleanup(olderThanMs: number): Promise<number>;
+}
+```
+
+---
+
+## `HitlRequest` shape
+
+```ts
+interface HitlRequest {
+  readonly id: string;
+  readonly runId: string;
+  readonly agentName: string;
+  readonly toolName: string;
+  readonly toolArguments: Record<string, unknown>;
+  readonly riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  readonly description?: string;
+  readonly status: 'pending' | 'approved' | 'rejected' | 'expired';
+  readonly comment?: string;          // reviewer comment
+  readonly createdAt: string;
+  readonly expiresAt: string;
+  readonly decidedAt?: string;
+}
+```
+
+---
+
+## HTTP approval endpoint
+
+When you serve your agent with `createHttpService()`, pass an `approvalStore` to expose a built-in REST endpoint:
+
+```ts
+import { createHttpService } from 'confused-ai';
+import { createSqliteApprovalStore } from 'confused-ai';
+
+const approvalStore = createSqliteApprovalStore('./agent.db');
+
+const app = createHttpService({ agent, approvalStore });
+app.listen(3000);
+```
+
+**List pending approvals:**
+```
+GET /v1/approvals?status=pending
+```
+
+**Submit a decision:**
+```
+POST /v1/approvals/:id
+Content-Type: application/json
+{ "decision": "approved", "comment": "Looks good to me" }
+```
+
+---
+
+## Manual approval decision (testing)
+
+```ts
+// Simulate an approver submitting a decision
+const pending = await approvalStore.listPending();
+for (const req of pending) {
+  await approvalStore.decide(req.id, {
+    decision: 'approved',
+    comment: 'Reviewed and approved.',
+  });
+}
+```
+
+---
+
+## Rejection handling
+
+When a human rejects a request, `waitForApproval` throws `ApprovalRejectedError`:
+
+```ts
+import { ApprovalRejectedError } from 'confused-ai';
+
+try {
+  const result = await agent.run(prompt, { runId: 'run-abc' });
+} catch (err) {
+  if (err instanceof ApprovalRejectedError) {
+    console.log('Rejected because:', err.comment);
+    // Notify user, log, update UI, etc.
+  }
+}
+```
+
+---
 
 ## Where to go next
 
-- Read `guardrails.md` for policy-driven blocking and validation.
-- Read `production.md` when you are assembling the broader runtime safety stack.
+- [Guardrails](./guardrails) — automatic policy-based blocking without human review.
+- [Production](./production) — circuit breakers, audit logs, idempotency.
+- [Example 03: Approval tool](../examples/03-approval-tool) — full HITL example.

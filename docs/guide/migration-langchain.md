@@ -1,30 +1,219 @@
 ---
 title: Migrate From LangChain
-description: Move LangChain-style systems onto confused-ai by translating chains and agents into clearer public runtime layers and narrower execution boundaries.
+description: Port LangChain chains, agents, tools, memory, and retrievers to confused-ai equivalents. LLMChain becomes compose(). AgentExecutor becomes createAgent(). Document loaders map to RAG ingestion helpers.
 outline: [2, 3]
 ---
 
 # Migrate From LangChain
 
-LangChain migrations are usually about removing unnecessary abstraction layers while keeping the useful execution boundaries. The goal is not to reproduce every old concept one-for-one. The goal is to express the real system more directly.
+`confused-ai` replaces LangChain's broad toolkit with purpose-built modules. The table below gives the mapping, followed by side-by-side code examples.
 
-## Typical translation pattern
+---
 
-In most migrations:
+## Quick comparison
 
-- simple chains become composition or workflows
-- tool-based agents remain agents with explicit tools
-- retrieval layers map to the knowledge and storage surfaces
-- operational concerns move into serving, observability, and production modules
+| LangChain concept | confused-ai equivalent |
+|---|---|
+| `ChatOpenAI`, `ChatAnthropic` | Model string in `createAgent({ model })` |
+| `LLMChain` | `compose(a, b)` or single `createAgent` call |
+| `SequentialChain` | `compose(a, b, c)` |
+| `AgentExecutor` | `createAgent({ tools })` |
+| `Tool`, `StructuredTool` | `tool({ name, description, schema, execute })` |
+| `ConversationBufferMemory` | `createAgent({ sessionId })` — managed by session store |
+| `VectorStoreRetriever` | `ContextProvider` or RAG via `createKnowledgeBase` |
+| `RunnableSequence` | `pipe(a).then(b).then(c)` |
+| `LCEL pipe (|)` | `pipe(a).then(b)` |
+| `Callbacks` | [Hooks](./hooks) and [Observability](./observability) |
+| `ConversationalRetrievalChain` | `createAgent` with a `ContextProvider` tool |
+| `Document`, `loader.load()` | `ContextProvider.update(documents)` |
+| `LangSmith` tracing | [Observability](./observability) — OpenTelemetry-native |
 
-## Recommended migration path
+---
 
-1. Start with one narrow use case.
-2. Rebuild the working path on the public `confused-ai` surface.
-3. Replace broad chain abstractions with clearer agent or workflow boundaries.
-4. Validate the migrated behavior before touching the next path.
+## Simple LLM call
+
+```ts
+// LangChain
+import { ChatOpenAI } from '@langchain/openai';
+const llm = new ChatOpenAI({ model: 'gpt-4o' });
+const result = await llm.invoke('What is the capital of France?');
+
+// confused-ai
+import { createAgent } from 'confused-ai';
+const agent = createAgent({
+  name: 'assistant',
+  instructions: 'You are a helpful assistant.',
+  model: 'gpt-4o',
+  apiKey: process.env.OPENAI_API_KEY!,
+});
+const result = await agent.run('What is the capital of France?');
+// result.text — the model output
+```
+
+---
+
+## LLMChain → `createAgent`
+
+```ts
+// LangChain
+import { LLMChain } from 'langchain/chains';
+import { PromptTemplate } from '@langchain/core/prompts';
+const chain = new LLMChain({
+  llm,
+  prompt: PromptTemplate.fromTemplate('Summarise this: {text}'),
+});
+await chain.call({ text: document });
+
+// confused-ai
+const summarizer = createAgent({
+  name: 'summarizer',
+  instructions: 'Summarise the provided text concisely.',
+  model: 'gpt-4o-mini',
+  apiKey: process.env.OPENAI_API_KEY!,
+});
+await summarizer.run(`Summarise this: ${document}`);
+```
+
+---
+
+## LCEL pipeline → `pipe`
+
+```ts
+// LangChain (LCEL)
+const chain = prompt | llm | outputParser;
+const result = await chain.invoke({ input: 'Hello' });
+
+// confused-ai
+import { pipe } from 'confused-ai';
+
+const result = await pipe(researchAgent)
+  .then(summaryAgent,  { transform: (r) => `Summarise:\n${r.text}` })
+  .then(formatAgent,   { transform: (r) => `Format for markdown:\n${r.text}` })
+  .run('Latest AI developments');
+```
+
+---
+
+## Tools
+
+```ts
+// LangChain
+import { DynamicStructuredTool } from '@langchain/core/tools';
+import { z } from 'zod';
+const searchTool = new DynamicStructuredTool({
+  name: 'search',
+  description: 'Search the web',
+  schema: z.object({ query: z.string() }),
+  func: async ({ query }) => fetchSearchResults(query),
+});
+
+// confused-ai
+import { tool } from 'confused-ai';
+import { z } from 'zod';
+const searchTool = tool({
+  name: 'search',
+  description: 'Search the web for up-to-date information.',
+  schema: z.object({ query: z.string().describe('The search query') }),
+  execute: async ({ query }) => fetchSearchResults(query),
+});
+```
+
+---
+
+## Agent with tools
+
+```ts
+// LangChain
+import { createOpenAIFunctionsAgent, AgentExecutor } from 'langchain/agents';
+const agent = await createOpenAIFunctionsAgent({ llm, tools, prompt });
+const executor = new AgentExecutor({ agent, tools });
+const result = await executor.invoke({ input: 'What is the weather in London?' });
+
+// confused-ai
+const weatherAgent = createAgent({
+  name: 'weather-agent',
+  instructions: 'Answer questions about weather using the available tools.',
+  model: 'gpt-4o',
+  apiKey: process.env.OPENAI_API_KEY!,
+  tools: [weatherTool, locationTool],
+});
+const result = await weatherAgent.run('What is the weather in London?');
+```
+
+---
+
+## Conversation memory → session
+
+```ts
+// LangChain
+import { ConversationChain } from 'langchain/chains';
+import { ConversationBufferMemory } from 'langchain/memory';
+const chain = new ConversationChain({ llm, memory: new ConversationBufferMemory() });
+await chain.call({ input: 'My name is Alice' });
+await chain.call({ input: 'What is my name?' }); // remembers Alice
+
+// confused-ai — sessions auto-persist history
+const agent = createAgent({ name: 'chat', instructions: 'You are a helpful assistant.', model: 'gpt-4o', apiKey: ... });
+const session = agent.createSession({ sessionId: 'user-123' });
+await session.run('My name is Alice');
+const result = await session.run('What is my name?'); // remembers Alice
+```
+
+---
+
+## RAG / retrieval
+
+```ts
+// LangChain
+const vectorStore = await MemoryVectorStore.fromTexts(texts, metadata, new OpenAIEmbeddings());
+const chain = new ConversationalRetrievalChain({ retriever: vectorStore.asRetriever(), llm });
+const result = await chain.call({ question: 'What is the return policy?' });
+
+// confused-ai
+import { createKnowledgeBase } from 'confused-ai';
+
+const kb = await createKnowledgeBase({ type: 'memory', embedder: 'openai', apiKey: process.env.OPENAI_API_KEY! });
+await kb.add(documents);
+
+const agent = createAgent({
+  name: 'support-agent',
+  instructions: 'Answer questions using the knowledge base.',
+  model: 'gpt-4o',
+  apiKey: process.env.OPENAI_API_KEY!,
+  contextProviders: [kb.asContextProvider()],
+});
+const result = await agent.run('What is the return policy?');
+```
+
+---
+
+## Callbacks → hooks
+
+```ts
+// LangChain
+const handler = new BaseCallbackHandler({
+  handleLLMStart: () => console.log('LLM started'),
+  handleLLMEnd: (output) => console.log('LLM done', output),
+});
+
+// confused-ai
+const agent = createAgent({
+  name: 'traced-agent',
+  instructions: '...',
+  model: 'gpt-4o',
+  apiKey: process.env.OPENAI_API_KEY!,
+  hooks: {
+    beforeRun: (ctx) => console.log('Run started', ctx.runId),
+    afterRun:  (ctx, result) => console.log('Run done', result.text),
+  },
+});
+```
+
+---
 
 ## Where to go next
 
-- Read `compose.md` and `workflows.md` if the original code was chain-shaped.
-- Read `tools.md` if the migration is mainly about tool runtime boundaries.
+- [Agents](./agents) — full `createAgent` API.
+- [Tools](./tools) — `tool()` authoring.
+- [RAG](./rag) — knowledge base and context providers.
+- [Hooks](./hooks) — lifecycle events for observability.

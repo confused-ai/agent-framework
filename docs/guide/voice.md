@@ -1,28 +1,173 @@
 ---
 title: Voice
-description: Build voice experiences by treating speech, transcription, and downstream agent behavior as distinct runtime stages instead of one opaque interaction.
+description: Add text-to-speech (TTS) and speech-to-text (STT) to agents. OpenAIVoiceProvider, ElevenLabsVoiceProvider, VoiceStreamSession for real-time audio streaming.
 outline: [2, 3]
 ---
 
 # Voice
 
-Voice systems are useful when the user experience should begin with speech instead of typed text. They combine capture, transcription, agent execution, and often speech synthesis into one interaction path.
+The voice module provides TTS/STT adapters and a real-time streaming session that wires together speech input → agent reasoning → spoken output.
 
-## What makes voice different
+```ts
+import {
+  OpenAIVoiceProvider,
+  ElevenLabsVoiceProvider,
+  createVoiceProvider,
+  VoiceStreamSession,
+} from 'confused-ai';
+```
 
-Voice systems carry timing, latency, and transcription constraints that ordinary text chat does not. That means the runtime design matters as much as the model response.
+---
 
-## Recommended rollout
+## Text-to-Speech (TTS)
 
-1. Validate transcription quality first.
-2. Keep the agent step independent from the audio transport.
-3. Add streaming or low-latency runtime behavior only after the core path is already working.
+```ts
+import { OpenAIVoiceProvider } from 'confused-ai';
 
-## Design guideline
+const voice = new OpenAIVoiceProvider({ apiKey: process.env.OPENAI_API_KEY });
 
-Treat voice as a pipeline, not a single feature toggle. The clearer the boundaries are between speech input, agent reasoning, and spoken output, the easier the system is to improve.
+const result = await voice.textToSpeech('Hello, how can I help you today?', {
+  voiceId: 'nova',   // 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'
+  model: 'tts-1-hd',
+  speed: 1.0,        // 0.25–4.0
+});
+
+// result.audio     — ArrayBuffer
+// result.format    — 'mp3' | 'opus' | 'aac' | 'flac' | 'wav' | 'pcm'
+// result.durationSeconds
+// result.characterCount
+```
+
+---
+
+## Speech-to-Text (STT)
+
+```ts
+const audioBuffer: ArrayBuffer = await readAudioFile('./question.mp3');
+
+const transcript = await voice.speechToText(audioBuffer, { language: 'en' });
+// transcript.text        — transcribed string
+// transcript.language    — detected language
+// transcript.confidence  — 0–1
+// transcript.durationSeconds
+```
+
+---
+
+## ElevenLabs provider
+
+```ts
+import { ElevenLabsVoiceProvider } from 'confused-ai';
+
+const voice = new ElevenLabsVoiceProvider({
+  apiKey: process.env.ELEVENLABS_API_KEY!,
+});
+
+const result = await voice.textToSpeech('Welcome back!', {
+  voiceId: 'rachel',  // ElevenLabs voice ID
+});
+```
+
+---
+
+## `createVoiceProvider` factory
+
+```ts
+import { createVoiceProvider } from 'confused-ai';
+
+const voice = createVoiceProvider({
+  provider: process.env.VOICE_PROVIDER as 'openai' | 'elevenlabs',
+  apiKey: process.env.VOICE_API_KEY!,
+  voiceId: 'nova',
+  model: 'tts-1',
+});
+```
+
+---
+
+## Real-time voice streaming
+
+`VoiceStreamSession` connects a microphone stream to an agent and streams synthesised audio back:
+
+```ts
+import { OpenAIVoiceProvider, VoiceStreamSession } from 'confused-ai';
+import { createAgent } from 'confused-ai';
+
+const voiceProvider = new OpenAIVoiceProvider();
+const agent = createAgent({
+  name: 'voice-assistant',
+  instructions: 'You are a helpful voice assistant. Be concise.',
+  model: 'gpt-4o-mini',
+  apiKey: process.env.OPENAI_API_KEY!,
+});
+
+const session = new VoiceStreamSession({
+  stt: voiceProvider,
+  tts: voiceProvider,
+  run: async (text) => {
+    const result = await agent.run(text);
+    return result.text;
+  },
+  voiceId: 'nova',
+  silenceThresholdMs: 800,   // ms of silence to trigger STT
+});
+
+// Push raw PCM audio chunks in real time (from microphone, WebSocket, etc.)
+microphone.on('data', (chunk) => session.pushChunk(chunk));
+
+// Consume events
+for await (const event of session.events()) {
+  switch (event.type) {
+    case 'transcript':
+      console.log('User said:', event.text);
+      break;
+    case 'text_delta':
+      process.stdout.write(event.delta ?? '');
+      break;
+    case 'audio':
+      speaker.write(event.chunk);  // play synthesised audio
+      break;
+    case 'agent_end':
+      console.log('Agent finished speaking');
+      break;
+    case 'error':
+      console.error('Voice error:', event.error);
+      break;
+  }
+}
+
+await session.end();
+```
+
+### `VoiceStreamEvent` types
+
+| `type` | Fields | Description |
+|---|---|---|
+| `transcript` | `text` | STT result from user speech |
+| `agent_start` | — | Agent processing began |
+| `text_delta` | `delta` | One token from agent response |
+| `audio` | `chunk` (Uint8Array) | TTS audio chunk (MP3) |
+| `agent_end` | — | Agent finished responding |
+| `error` | `error` | Session-level error |
+
+---
+
+## `VoiceProvider` interface
+
+Implement this to add any TTS/STT backend:
+
+```ts
+interface VoiceProvider {
+  textToSpeech(text: string, options?: Partial<VoiceConfig>): Promise<TTSResult>;
+  speechToText?(audio: ArrayBuffer | Blob, options?: { language?: string }): Promise<STTResult>;
+  listVoices?(): Promise<Array<{ id: string; name: string; preview_url?: string }>>;
+}
+```
+
+---
 
 ## Where to go next
 
-- Read `websocket.md` when the voice experience depends on a live transport.
-- Read `production.md` when latency and runtime controls become operational concerns.
+- [Vision](./vision) — image and multimodal inputs.
+- [WebSocket](./websocket) — realtime transport for voice sessions.
+- [Hooks](./hooks) — lifecycle hooks for monitoring speech latency.

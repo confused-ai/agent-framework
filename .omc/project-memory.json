@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1776854961712,
+  "lastScanned": 1778501716590,
   "projectRoot": "/Users/rvuyyuru/Desktop/ag-code/agent-framework",
   "techStack": {
     "languages": [
@@ -23,6 +23,11 @@
     ],
     "frameworks": [
       {
+        "name": "playwright",
+        "version": "1.59.1",
+        "category": "testing"
+      },
+      {
         "name": "vitest",
         "version": "4.0.18",
         "category": "testing"
@@ -34,15 +39,48 @@
   "build": {
     "buildCommand": "npm run build",
     "testCommand": "npm test",
-    "lintCommand": null,
+    "lintCommand": "npm run lint",
     "devCommand": "npm run dev",
     "scripts": {
-      "build": "tsup",
+      "example:simple": "bun examples/simple-agent.ts",
+      "example:showcase": "bun examples/framework-showcase.ts",
+      "example:potential": "bun examples/unlock-framework-potential.ts",
+      "example:persona": "bun examples/persona-builder.ts",
+      "example:meridian": "bun examples/meridian-platform.ts",
+      "example:graph": "bun examples/graph-workflow.ts",
+      "example:multi-agent": "bun examples/multi-agent-orchestration.ts",
+      "example:reasoning": "bun examples/reasoning-agent.ts",
+      "example:scheduled": "bun examples/scheduled-agent.ts",
+      "example:code-review": "bun examples/code-review-pipeline.ts",
+      "example:eval": "bun examples/eval-regression.ts",
+      "build": "bun run build:root",
+      "build:root": "tsup && node scripts/gen-root-dts.mjs",
+      "build:packages": "turbo run build --filter='@confused-ai/*' --output-logs=errors-only",
+      "build:all": "bun run build:packages && bun run build:root",
+      "package:sync": "node scripts/sync-package-manifests.mjs",
+      "package:check": "node scripts/sync-package-manifests.mjs --check && node scripts/validate-package-access.mjs",
+      "package:prepare": "npm run package:sync && npm run build:all && npm run package:check",
+      "publish:packages": "node scripts/publish-packages.mjs",
+      "publish:packages:dry-run": "node scripts/publish-packages.mjs --dry-run",
       "dev": "tsup --watch",
-      "typecheck": "tsc --noEmit",
+      "typecheck": "tsc -p tsconfig.typecheck.json",
       "test": "vitest run",
       "test:watch": "vitest",
-      "test:coverage": "vitest run --coverage"
+      "test:coverage": "vitest run --coverage",
+      "bench": "vitest bench",
+      "lint": "eslint src --max-warnings 0",
+      "lint:packages": "eslint packages/foundation/contracts/src packages/runtime/core/src packages/platform/observe/src packages/platform/guard/src packages/platform/serve/src packages/providers/models/src packages/state/session/src packages/tools-layer/tools/src packages/runtime/workflow/src packages/state/knowledge/src packages/providers/router/src packages/developer/test-utils/src packages/state/adapter-redis/src --max-warnings 10",
+      "lint:fix": "eslint packages/foundation/contracts/src packages/runtime/core/src packages/tools-layer/tools/src packages/state/session/src --fix",
+      "check:bundle": "bun run check:bundle:lite && node scripts/check-bundle-size.mjs --entry src/tools/core/index.ts --max-kb 20 --label confused-ai/tools/core && node scripts/check-bundle-size.mjs --entry src/tools/search/index.ts --max-kb 50 --label confused-ai/tools/search",
+      "check:bundle:lite": "node scripts/check-bundle-size.mjs --entry src/lite.ts --max-kb 50 --label confused-ai/lite",
+      "check:bundle:root": "node scripts/check-bundle-size.mjs --entry src/index.ts --max-kb 450 --label confused-ai/root-umbrella",
+      "check:docs": "node scripts/check-docs-claims.mjs",
+      "check:docs:snippets": "node scripts/check-docs-snippets.mjs",
+      "docs:dev": "vitepress dev docs",
+      "docs:build": "vitepress build docs",
+      "docs:preview": "vitepress preview docs",
+      "prepack": "npm run typecheck && npm run test && npm run package:prepare && bun run lint:packages || true",
+      "pack:inspect": "npm pack --dry-run"
     }
   },
   "conventions": {
@@ -52,9 +90,15 @@
     "fileOrganization": null
   },
   "structure": {
-    "isMonorepo": false,
-    "workspaces": [],
+    "isMonorepo": true,
+    "workspaces": [
+      "packages/*",
+      "packages/*/*"
+    ],
     "mainDirectories": [
+      "docs",
+      "examples",
+      "scripts",
       "src",
       "tests"
     ],
@@ -65,54 +109,180 @@
   },
   "customNotes": [],
   "directoryMap": {
+    "benchmarks": {
+      "path": "benchmarks",
+      "purpose": null,
+      "fileCount": 4,
+      "lastAccessed": 1778501716575,
+      "keyFiles": [
+        "event-store.bench.ts",
+        "executor.bench.ts",
+        "graph-compile.bench.ts",
+        "replay.bench.ts"
+      ]
+    },
     "dist": {
       "path": "dist",
       "purpose": "Distribution/build output",
-      "fileCount": 126,
-      "lastAccessed": 1776854961706,
+      "fileCount": 211,
+      "lastAccessed": 1778501716580,
       "keyFiles": [
-        "agentic.cjs",
-        "agentic.cjs.map",
-        "agentic.d.cts",
-        "agentic.d.ts",
-        "agentic.js"
+        "adapter-redis.cjs",
+        "adapter-redis.cjs.map",
+        "adapter-redis.js",
+        "adapter-redis.js.map",
+        "adapters.cjs"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 4,
+      "lastAccessed": 1778501716580,
+      "keyFiles": [
+        "changelog.md",
+        "index.md",
+        "package.json",
+        "tsconfig.json"
+      ]
+    },
+    "examples": {
+      "path": "examples",
+      "purpose": "Example code",
+      "fileCount": 14,
+      "lastAccessed": 1778501716581,
+      "keyFiles": [
+        "chat-ui.html",
+        "code-review-pipeline.ts",
+        "eval-regression.ts",
+        "framework-showcase.ts",
+        "graph-workflow.ts"
+      ]
+    },
+    "packages": {
+      "path": "packages",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1778501716581,
+      "keyFiles": []
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 11,
+      "lastAccessed": 1778501716581,
+      "keyFiles": [
+        "build-dts.mjs",
+        "check-bundle-size.mjs",
+        "check-docs-claims.mjs",
+        "check-docs-snippets.mjs",
+        "fix-packages-for-npm.mjs"
       ]
     },
     "src": {
       "path": "src",
       "purpose": "Source code",
-      "fileCount": 7,
-      "lastAccessed": 1776854961708,
+      "fileCount": 12,
+      "lastAccessed": 1778501716581,
       "keyFiles": [
         "agent.ts",
         "create-agent.ts",
-        "debug-logger.ts",
-        "errors.ts",
-        "index.ts"
+        "guard.ts",
+        "index.ts",
+        "lite.ts"
+      ]
+    },
+    "temp_videos": {
+      "path": "temp_videos",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1778501716582,
+      "keyFiles": []
+    },
+    "templates": {
+      "path": "templates",
+      "purpose": null,
+      "fileCount": 7,
+      "lastAccessed": 1778501716582,
+      "keyFiles": [
+        "Dockerfile",
+        "README.md",
+        "docker-compose.yml",
+        "fly.toml",
+        "grafana-dashboard.json"
       ]
     },
     "tests": {
       "path": "tests",
       "purpose": "Test files",
-      "fileCount": 5,
-      "lastAccessed": 1776854961709,
+      "fileCount": 27,
+      "lastAccessed": 1778501716583,
       "keyFiles": [
+        "agentic-runner.test.ts",
         "artifact.test.ts",
+        "budget.test.ts",
         "circuit-breaker.test.ts",
-        "health.test.ts",
-        "llm-cache.test.ts",
-        "rate-limiter.test.ts"
+        "compat-providers.test.ts"
+      ]
+    },
+    "docs/api": {
+      "path": "docs/api",
+      "purpose": "API routes",
+      "fileCount": 5,
+      "lastAccessed": 1778501716584,
+      "keyFiles": [
+        "agent.md",
+        "knowledge.md",
+        "orchestration.md"
+      ]
+    },
+    "docs/examples": {
+      "path": "docs/examples",
+      "purpose": "Example code",
+      "fileCount": 23,
+      "lastAccessed": 1778501716584,
+      "keyFiles": [
+        "01-hello-world.md",
+        "02-custom-tool.md",
+        "03-approval-tool.md"
+      ]
+    },
+    "docs/public": {
+      "path": "docs/public",
+      "purpose": "Public files",
+      "fileCount": 3,
+      "lastAccessed": 1778501716584,
+      "keyFiles": [
+        "favicon.svg",
+        "logo.svg",
+        "og-banner.svg"
+      ]
+    },
+    "docs/src": {
+      "path": "docs/src",
+      "purpose": "Source code",
+      "fileCount": 0,
+      "lastAccessed": 1778501716584,
+      "keyFiles": []
+    },
+    "examples/data": {
+      "path": "examples/data",
+      "purpose": "Data files",
+      "fileCount": 6,
+      "lastAccessed": 1778501716585,
+      "keyFiles": [
+        "persona-agent-meta.json",
+        "persona-agent-sessions.db",
+        "persona-agent-sessions.db-shm"
       ]
     },
     "src/config": {
       "path": "src/config",
       "purpose": "Configuration files",
-      "fileCount": 4,
-      "lastAccessed": 1776854961709,
+      "fileCount": 1,
+      "lastAccessed": 1778501716585,
       "keyFiles": [
-        "index.ts",
-        "loader.ts",
-        "types.ts"
+        "index.ts"
       ]
     }
   },

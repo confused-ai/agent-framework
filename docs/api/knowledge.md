@@ -1,53 +1,208 @@
 ---
 title: Knowledge API
-description: Understand where retrieval and document-backed context fit into confused-ai and when to add the knowledge layer.
+description: Complete reference for createKnowledgeEngine(), addDocuments(), retrieve(), buildContext(), and custom store and embedding configuration.
 outline: [2, 3]
 ---
 
 # Knowledge API
 
-The knowledge layer is for cases where the model should answer from indexed content instead of relying only on prompt text or short-term conversation state.
+The knowledge layer provides retrieval-augmented generation (RAG): ingest documents into a searchable index, retrieve relevant chunks at run time, and inject them into the agent's context automatically. Attach a `KnowledgeEngine` to any agent with the `knowledgebase` option.
 
-## What the knowledge layer is responsible for
+```ts
+import { createKnowledgeEngine } from 'confused-ai/knowledge';
+```
 
-Use the knowledge surface when you need to:
+---
 
-- ingest documents or structured content into a searchable index
-- retrieve relevant context at run time
-- ground answers in policies, manuals, knowledge bases, or domain documents
+## `createKnowledgeEngine()` — create an engine
 
-This is different from sessions and memory. Sessions preserve conversation continuity. Memory preserves selected facts or history. Knowledge is the retrieval-backed context layer for source material.
+```ts
+import { createKnowledgeEngine } from 'confused-ai/knowledge';
 
-## When to add it
+const knowledge = createKnowledgeEngine({
+  topK: 3,               // retrieve up to 3 most relevant chunks per query
+  maxContextChars: 1_500, // cap context injected into the system prompt
+});
+```
 
-Add the knowledge layer when the model needs access to information that is too large, too dynamic, or too sensitive to paste directly into the prompt.
+**Options:**
 
-Typical examples are:
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `topK` | `number` | `3` | Number of chunks to retrieve per query |
+| `maxContextChars` | `number` | `2000` | Maximum characters injected into the prompt |
+| `store` | `VectorStore` | in-memory | Custom vector store implementation |
+| `embed` | `EmbedFn` | built-in fallback | Custom embedding function |
 
-- customer support against product policies
-- internal copilots answering from engineering docs
-- document Q and A over handbooks, contracts, or onboarding material
+The engine defaults to an in-memory vector store and a built-in embedding fallback, so no external service is required to get started.
 
-## Recommended path
+---
 
-The clean rollout is:
+## `addDocuments()` — ingest content
 
-1. Prove the base agent behavior first.
-2. Add a small document set and verify retrieval quality.
-3. Inspect the retrieved context before trusting the final answer.
-4. Only then add memory, orchestration, or larger ingestion pipelines.
+```ts
+await knowledge.addDocuments([
+  {
+    id: 'doc-001',
+    content: 'Refunds are accepted within 30 days of purchase.',
+    metadata: { source: 'return-policy.md', category: 'returns' },
+  },
+  {
+    id: 'doc-002',
+    content: 'Digital downloads are non-refundable once activated.',
+    metadata: { source: 'return-policy.md', category: 'returns' },
+  },
+]);
+```
 
-## What to keep separate
+**Document shape:**
 
-Keep these concerns distinct when designing the system:
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | `string` | ✓ | Unique document identifier |
+| `content` | `string` | ✓ | The text content to embed and retrieve |
+| `metadata` | `Record<string, unknown>` | — | Arbitrary metadata attached to the document |
 
-- knowledge for external source material
-- memory for selected learned facts or history
-- tools for live data access and side effects
+---
 
-That separation makes failures easier to diagnose because you can tell whether the problem came from retrieval, missing memory, or an unavailable external tool.
+## `retrieve()` — semantic search
+
+Fetch the top-K most relevant chunks for a query string. Returns chunks with similarity scores.
+
+```ts
+const chunks = await knowledge.retrieve('Can I return software licenses?');
+
+for (const chunk of chunks) {
+  console.log(`[${chunk.score.toFixed(3)}] ${chunk.document.id}`);
+  console.log(chunk.document.content.slice(0, 100));
+}
+```
+
+**`retrieve()` result shape:**
+
+```ts
+interface RetrievedChunk {
+  score: number;          // cosine similarity 0–1
+  document: {
+    id: string;
+    content: string;
+    metadata?: Record<string, unknown>;
+  };
+}
+```
+
+---
+
+## `buildContext()` — get prompt-ready context
+
+`buildContext()` retrieves the top-K chunks and formats them as a single string ready for prompt injection. The agent's `knowledgebase` option calls this automatically — use it directly when you want to inspect or pre-build context.
+
+```ts
+const context = await knowledge.buildContext('What is the shipping timeline?');
+console.log(context);
+// → "Standard shipping takes 3–5 business days. Express shipping is available..."
+```
+
+---
+
+## Attach to an agent
+
+Pass the engine as `knowledgebase` on any agent. The engine's context is injected into the system prompt before every run.
+
+```ts
+import { createAgent } from 'confused-ai';
+import { createKnowledgeEngine } from 'confused-ai/knowledge';
+
+const knowledge = createKnowledgeEngine({ topK: 3, maxContextChars: 1_500 });
+await knowledge.addDocuments([...]);
+
+const agent = createAgent({
+  name: 'support-bot',
+  instructions: 'Answer questions using the knowledge base. If the answer is missing, say so.',
+  model: 'gpt-4o-mini',
+  apiKey: process.env.OPENAI_API_KEY!,
+  knowledgebase: knowledge,
+});
+```
+
+---
+
+## Update and delete documents
+
+```ts
+// Update an existing document (re-embeds content)
+await knowledge.updateDocument('doc-001', {
+  content: 'Refunds are accepted within 60 days of purchase for Pro plan customers.',
+  metadata: { source: 'return-policy-v2.md', updated: true },
+});
+
+// Delete a document
+await knowledge.deleteDocument('doc-001');
+
+// Clear all documents
+await knowledge.clear();
+```
+
+---
+
+## Custom embedding function
+
+Bring your own embeddings — useful for switching to a specific model or using a locally-hosted service.
+
+```ts
+import OpenAI from 'openai';
+import { createKnowledgeEngine, type EmbedFn } from 'confused-ai/knowledge';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const embed: EmbedFn = async (texts) => {
+  const response = await openai.embeddings.create({
+    model: 'text-embedding-3-small',
+    input: texts,
+  });
+  return response.data.map((d) => d.embedding);
+};
+
+const knowledge = createKnowledgeEngine({ topK: 5, maxContextChars: 2_000, embed });
+```
+
+---
+
+## Custom vector store
+
+Plug in an external vector database for production-scale retrieval.
+
+```ts
+import { createKnowledgeEngine, type VectorStore } from 'confused-ai/knowledge';
+
+// Minimal VectorStore interface
+const myStore: VectorStore = {
+  async upsert(documents) { /* insert into Pinecone, Qdrant, pgvector, etc. */ },
+  async search(queryEmbedding, topK) {
+    /* query your vector DB, return RetrievedChunk[] */
+    return [];
+  },
+  async delete(ids) { /* remove documents */ },
+  async clear() { /* drop all vectors */ },
+};
+
+const knowledge = createKnowledgeEngine({ topK: 5, store: myStore });
+```
+
+---
+
+## Knowledge vs sessions vs memory
+
+| Layer | Stores | Retrieved by | Best for |
+|---|---|---|---|
+| **Knowledge** | Documents and policies | Semantic similarity search | Reference content, product docs, FAQs |
+| **Session** | Conversation turns | Chronological order | Active conversation context |
+| **Memory** | Facts and preferences | Keyword or semantic recall | Per-user personalization |
+
+---
 
 ## Where to go next
 
-- Read the RAG guides and examples for end-to-end retrieval workflows.
-- Use the examples when you need a runnable ingestion-to-answer pattern.
+- [RAG guide](../guide/rag) — ingestion strategies, chunking, and retrieval tuning
+- [05 · RAG Knowledge Base](../examples/05-rag) — runnable end-to-end retrieval example
+- [Memory API](./knowledge) — user-specific fact and preference storage

@@ -9,7 +9,7 @@
  *
  * Adding a custom backend:
  * ```ts
- * import { AgentDb } from './/index.js';
+ * import { AgentDb } from './index.js';
  *
  * class MyDb extends AgentDb {
  *   readonly type = 'mydb';

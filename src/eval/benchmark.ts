@@ -13,7 +13,7 @@
  *   - Custom: any `(output, expected?) => number | Promise<number>` function
  *
  * Usage:
- *   import { runBenchmark, exactMatchScorer, llmJudgeScorer } from './/index.js';
+ *   import { runBenchmark, exactMatchScorer, llmJudgeScorer } from './index.js';
  *
  *   const report = await runBenchmark({
  *     name:      'qa-v1',

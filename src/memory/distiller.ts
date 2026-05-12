@@ -16,7 +16,7 @@
  *   4. Delete the consumed short-term entries
  *
  * Usage:
- *   import { MemoryDistiller } from './/index.js';
+ *   import { MemoryDistiller } from './index.js';
  *
  *   const distiller = new MemoryDistiller({
  *     store: myMemoryStore,

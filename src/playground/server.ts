@@ -172,7 +172,7 @@ function parseWsFrame(buf: Buffer): { data: string; consumed: number } | null {
  *
  * @example
  * ```ts
- * import { createPlayground } from './/index.js';
+ * import { createPlayground } from './index.js';
  *
  * const svc = await createPlayground([
  *     { name: 'my-agent', run: async (p) => agent.run(p) },

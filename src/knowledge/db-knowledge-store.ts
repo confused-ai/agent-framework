@@ -12,7 +12,7 @@
  * Usage:
  * ```ts
  * import { SqliteAgentDb } from '../db/index.js';
- * import { DbKnowledgeEngine } from './/index.js';
+ * import { DbKnowledgeEngine } from './index.js';
  *
  * const db     = new SqliteAgentDb({ path: './agent.db' });
  * const engine = new DbKnowledgeEngine({ db });

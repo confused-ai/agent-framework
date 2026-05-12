@@ -15,7 +15,7 @@
  * Usage:
  * ```ts
  * import { SqliteAgentDb } from '../db/index.js';
- * import { DbUserMemoryStore, DbSessionContextStore, ... } from './/index.js';
+ * import { DbUserMemoryStore, DbSessionContextStore, ... } from './index.js';
  *
  * const db = new SqliteAgentDb({ path: './agent.db' });
  * const machine = new LearningMachine({

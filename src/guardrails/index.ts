@@ -11,7 +11,7 @@
  *
  * @example
  * ```ts
- * import { GuardrailValidator, createPiiDetectionRule, createPromptInjectionRule } from './/index.js';
+ * import { GuardrailValidator, createPiiDetectionRule, createPromptInjectionRule } from './index.js';
  *
  * const guardrails = new GuardrailValidator({
  *   rules: [

@@ -19,7 +19,7 @@ import type { LLMProvider, Message, GenerateResult } from '../contracts/index.js
  *
  * @example
  * ```ts
- * import { MockLLMProvider } from './/index.js';
+ * import { MockLLMProvider } from './index.js';
  * const llm = new MockLLMProvider({ response: 'Paris' });
  * ```
  */

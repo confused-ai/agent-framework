@@ -6,7 +6,7 @@
  *
  * @example
  * ```ts
- * import { createAgentDb } from './/index.js';
+ * import { createAgentDb } from './index.js';
  *
  * const db = await createAgentDb('sqlite:///data/agent.db');
  * const db2 = await createAgentDb({ type: 'postgres', uri: 'postgres://…' });

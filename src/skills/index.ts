@@ -6,7 +6,7 @@
  *
  * @example
  * ```ts
- * import { webResearchSkill, codeReviewerSkill } from './/index.js';
+ * import { webResearchSkill, codeReviewerSkill } from './index.js';
  * import { agent } from 'confused-ai';
  *
  * const bot = agent({

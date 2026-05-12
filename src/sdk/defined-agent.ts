@@ -799,7 +799,7 @@ class TypedAgentImpl<TIn, TOut> implements TypedAgent<TIn, TOut> {
  * @example — Minimal Q&A agent
  * ```ts
  * import { z } from 'zod';
- * import { defineAgent } from './/index.js';
+ * import { defineAgent } from './index.js';
  *
  * const agent = defineAgent('qa-bot')
  *   .model('openai:gpt-4o')
@@ -815,7 +815,7 @@ class TypedAgentImpl<TIn, TOut> implements TypedAgent<TIn, TOut> {
  * @example — Agent with tools, skills, and streaming
  * ```ts
  * import { z } from 'zod';
- * import { defineAgent } from './/index.js';
+ * import { defineAgent } from './index.js';
  * import { webSearchTool } from './tools/web-search';
  * import { citationSkill } from './skills/citation';
  *

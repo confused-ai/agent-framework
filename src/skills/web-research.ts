@@ -9,7 +9,7 @@
  *
  * Usage:
  * ```ts
- * import { webResearchSkill } from './/index.js';
+ * import { webResearchSkill } from './index.js';
  * import { agent } from 'confused-ai';
  *
  * const bot = agent({

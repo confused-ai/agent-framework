@@ -13,7 +13,7 @@
  * All primitives return a `WorkflowStep` that is compatible with `compose()`.
  *
  * Usage:
- *   import { branch, loopUntil, forEach, race, retry } from './/index.js';
+ *   import { branch, loopUntil, forEach, race, retry } from './index.js';
  *
  *   const classify = branch(classifierAgent)
  *     .when((r) => r.text.includes('bug'),      bugFixAgent)

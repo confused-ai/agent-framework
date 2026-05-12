@@ -3,7 +3,7 @@
  *
  * @example
  * ```ts
- * import { createPlayground } from './/index.js';
+ * import { createPlayground } from './index.js';
  *
  * const svc = await createPlayground(
  *     [{ name: 'assistant', run: async (p) => myAgent.run(p) }],

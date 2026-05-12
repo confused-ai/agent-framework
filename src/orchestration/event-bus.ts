@@ -12,7 +12,7 @@
  *   - Zero external dependencies
  *
  * Usage:
- *   import { createAgentEventBus } from './/index.js';
+ *   import { createAgentEventBus } from './index.js';
  *
  *   type MyEvents = {
  *     'task:assigned': { taskId: string; agentId: string };

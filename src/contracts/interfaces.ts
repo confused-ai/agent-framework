@@ -389,7 +389,7 @@ export interface KVStore {
  *
  * @example
  * ```ts
- * import type { Skill } from './/index.js';
+ * import type { Skill } from './index.js';
  *
  * export const webResearchSkill: Skill = {
  *   id:           'web-research',

@@ -9,8 +9,8 @@
  *
  * Usage:
  * ```ts
- * import { createAgentMemoryTools } from './/index.js';
- * import { InMemoryStore }          from './/index.js';
+ * import { createAgentMemoryTools } from './index.js';
+ * import { InMemoryStore }          from './index.js';
  *
  * const store = new InMemoryStore();
  * const { remember, recall } = createAgentMemoryTools({ store });

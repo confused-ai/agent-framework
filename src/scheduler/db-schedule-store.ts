@@ -23,7 +23,7 @@
  * Usage:
  * ```ts
  * import { SqliteAgentDb } from '../db/index.js';
- * import { ScheduleManager, DbScheduleStore } from './/index.js';
+ * import { ScheduleManager, DbScheduleStore } from './index.js';
  *
  * const db    = new SqliteAgentDb({ path: './agent.db' });
  * const store = new DbScheduleStore(db);

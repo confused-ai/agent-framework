@@ -16,7 +16,7 @@
  *
  * Usage:
  * ```ts
- * import { createSummaryBufferHook } from './/index.js';
+ * import { createSummaryBufferHook } from './index.js';
  *
  * const beforeStep = createSummaryBufferHook({
  *   llm,

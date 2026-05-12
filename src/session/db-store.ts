@@ -7,7 +7,7 @@
  * Usage:
  * ```ts
  * import { SqliteAgentDb } from '../db/index.js';
- * import { DbSessionStore } from './/index.js';
+ * import { DbSessionStore } from './index.js';
  *
  * const db    = new SqliteAgentDb({ path: './data/agent.db' });
  * const store = new DbSessionStore(db);

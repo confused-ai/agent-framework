@@ -8,7 +8,7 @@
  * @example
  * ```ts
  * import { createClient } from 'redis';
- * import { RedisSessionStore, RedisRateLimiter } from './/index.js';
+ * import { RedisSessionStore, RedisRateLimiter } from './index.js';
  *
  * const redis = createClient({ url: process.env.REDIS_URL });
  * await redis.connect();

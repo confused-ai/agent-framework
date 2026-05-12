@@ -6,10 +6,10 @@
  *
  * @example
  * ```ts
- * import { AgentDb, SqliteAgentDb, PostgresAgentDb } from './/index.js';
+ * import { AgentDb, SqliteAgentDb, PostgresAgentDb } from './index.js';
  *
  * // Extend to add your own backend:
- * import { AgentDb } from './/index.js';
+ * import { AgentDb } from './index.js';
  * class MyDb extends AgentDb { ... }
  * ```
  */

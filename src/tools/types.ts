@@ -63,7 +63,7 @@ interface ToolDefinition<S extends z.ZodType> {
  * `defineTool()` will be removed in v2.0.
  *
  * ```ts
- * import { tool } from './/index.js';
+ * import { tool } from './index.js';
  * const myTool = tool({ name: '...', description: '...', parameters: z.object({...}), execute: async (p) => p });
  * ```
  */

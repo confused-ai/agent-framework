@@ -7,7 +7,7 @@
  *
  * Usage:
  * ```ts
- * import { codeReviewerSkill } from './/index.js';
+ * import { codeReviewerSkill } from './index.js';
  * import { agent } from 'confused-ai';
  *
  * const bot = agent({

@@ -10,7 +10,7 @@
  *
  * Usage:
  *   import { z } from 'zod';
- *   import { createStructuredAgent } from './/index.js';
+ *   import { createStructuredAgent } from './index.js';
  *
  *   const ReviewSchema = z.object({
  *     sentiment: z.enum(['positive', 'neutral', 'negative']),

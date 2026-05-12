@@ -17,7 +17,7 @@
  *
  * @example
  * ```ts
- * import { AgentTeam, AgentSwarm, AgentPipeline } from './/index.js';
+ * import { AgentTeam, AgentSwarm, AgentPipeline } from './index.js';
  *
  * const team = new AgentTeam([researchAgent, writeAgent, reviewAgent]);
  * const result = await team.run('Research and write a blog post about AI');

@@ -5,7 +5,7 @@
  * Internal helpers (queue, loop, retry fallback) stay private (ISP).
  *
  * Import paths:
- *   import { createAgent }    from './/index.js';
+ *   import { createAgent }    from './index.js';
  *   import { AgentRunner }    from './runner/index.js';
  *   import type { Agent }     from './types.js';
  *   import { ConfigError }    from './errors.js';

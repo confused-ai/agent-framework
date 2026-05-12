@@ -7,8 +7,8 @@
  *
  * ## Usage
  * ```ts
- * import { createFallbackSessionStore } from './/index.js';
- * import { createRedisStore } from './/index.js';
+ * import { createFallbackSessionStore } from './index.js';
+ * import { createRedisStore } from './index.js';
  *
  * const store = createFallbackSessionStore(
  *   createRedisStore({ redis: process.env.REDIS_URL }),

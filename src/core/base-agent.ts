@@ -8,7 +8,6 @@ import {
     AgentContext,
     AgentHooks,
     AgentInput,
-    AgentLifecycleHooks,
     AgentOutput,
     AgentRunOptions,
     AgentRunResult,
@@ -19,6 +18,7 @@ import {
     MultiModalInput,
     StreamChunk,
 } from './types.js';
+import type { AgentLifecycleHooks as _AgentLifecycleHooks } from './types.js'; // reserved
 import { generateEntityId } from './types.js';
 import { DebugLogger, createDebugLogger } from '../shared/index.js';
 

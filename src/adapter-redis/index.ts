@@ -31,3 +31,8 @@ export {
     type RedisRateLimiterConfig,
     type RedisClientForRateLimiter,
 } from './rate-limiter.js';
+
+export {
+    RedisEventStore,
+    type RedisEventStoreConfig,
+} from './event-store.js';

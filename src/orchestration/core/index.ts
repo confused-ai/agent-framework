@@ -1,4 +1,11 @@
 // Orchestration core: types, message bus, load balancer, orchestrator, toolkit, adapters
+export {
+    Actor,
+    ActorSystem,
+    type ActorConfig,
+    type ActorMessage,
+    type ActorMessageType,
+} from './actor.js';
 export * from './types.js';
 export { OrchestratorImpl } from './orchestrator.js';
 export { MessageBusImpl } from './message-bus.js';
@@ -14,3 +21,18 @@ export type {
     MCPAgentMessage as A2AMessage,
     MCPAgentClient as LegacyA2AClientInterface,
 } from './mcp-types.js';
+
+export {
+    CommandBus,
+    EventBus,
+    type Command,
+    type DomainEvent,
+    type CommandHandler,
+    type EventHandler as CQRSEventHandler,
+    type StartWorkflowPayload,
+    type ExecuteToolPayload,
+    type PauseWorkflowPayload,
+    type WorkflowStartedPayload,
+    type ToolExecutedPayload,
+    type WorkflowRecoveredPayload,
+} from './cqrs.js';

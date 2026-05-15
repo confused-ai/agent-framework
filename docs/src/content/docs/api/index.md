@@ -57,7 +57,7 @@ const result = await assistant.run('Say hello in one sentence.');
 console.log(result.text);
 ```
 
-Use `createAgent(...)` when you want the factory-style API directly. Use `Agent` only for legacy class-based code.
+Use `createAgent(...)` when you want the factory-style API directly. Use `Agent` when you want a class-based API with legacy defaults plus modern fluent methods.
 
 ## Typed Builder
 

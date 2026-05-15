@@ -36,6 +36,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **`lint:packages` gate** — reduced from 956 errors / 26 warnings (audit baseline, May 8) to **0 errors / 2 warnings** under `--max-warnings 10`. Fixes cover: unnecessary type assertions, confusing void expressions in arrow shorthand, tautological conditions, non-null assertions without comments, and unnecessary optional chains.
 - **`HttpClientTool` SSRF** — private-IP requests now blocked by default via DNS resolution; no `allowedDomains` config required for the common case.
+- **Unified class API** — `SimpleAgent` and `LegacyAgent` were removed from public exports; `Agent` is now the single class surface with legacy defaults and modern fluent methods in one implementation.
+- **Durable runtime lifecycle correctness** — resumptions now reject terminal workflows consistently, and terminal-state handling no longer allows invalid resume paths.
+- **CQRS error propagation** — `EventBus.publish()` now surfaces handler failures via `AggregateError` after handlers run instead of failing silently.
+- **State machine lifecycle hardening** — `AgentStateMachine.start()` is idempotent; transition commits in `send()` and `jumpTo()` are now atomic (state updates only after target `onEntry` succeeds).
+- **Snapshot restore semantics** — `StateMachineSnapshot` now persists startup status via `started`; `fromSnapshot()` restores it and defaults legacy snapshots to started to prevent duplicate initial `onEntry` execution.
 
 ### Security
 

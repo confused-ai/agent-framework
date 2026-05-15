@@ -71,7 +71,7 @@ const agent = createAgent({
   skills: [codeReviewerSkill],
 });
 
-const result = await agent.run('Review src/auth/jwt.ts for security vulnerabilities.');
+const result = await agent.run('Review src/runtime/jwt-rbac.ts for security vulnerabilities.');
 // Supported extensions: .ts, .js, .py, .go, .rs, .java, .sql, .yaml, .md and more
 ```
 

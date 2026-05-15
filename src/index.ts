@@ -18,8 +18,10 @@
 export { agent, bare, compose, pipe, definePersona, buildPersonaInstructions, createDevLogger, createDevToolMiddleware } from './dx/index.js';
 export type { AgentMinimalOptions, BareAgentOptions, ComposeOptions, ComposedAgent, AgentPersona } from './dx/index.js';
 
-// ── Class-based Agent (classic DX) ─────────────────────────────────────────────
+// ── Agent (new DX) — zero-config, fluent, progressively powerful ──────────────
+// `Agent` is the only class-based entry point. Legacy and fluent APIs unified.
 export { Agent } from './agent.js';
+export type { AgentOptions } from './agent.js';
 
 // ── createAgent (legacy) — use agent() instead ─────────────────────────────────
 export { createAgent } from './create-agent.js';
@@ -239,3 +241,7 @@ export * from './knowledge/index.js';
 
 // ── Shared utilities ──────────────────────────────────────────────────────────
 export { VERSION, isTelemetryEnabled, recordFrameworkStartup } from './shared/index.js';
+
+// ── Redis Adapter ──────────────────────────────────────────────────────────────
+export { RedisEventStore } from './adapter-redis/event-store.js';
+export type { RedisEventStoreConfig } from './adapter-redis/event-store.js';

@@ -30,6 +30,11 @@ The authoritative `CHANGELOG.md` lives in the repository root.
 - **`DbSessionStore`** — `now()` helper now returns Unix epoch seconds (`Math.floor(Date.now() / 1000)`) to match the `AgentDb` timestamp contract (was returning milliseconds, causing `created_at`/`updated_at` to be off by ×1000).
 - **`TursoAgentDb`** — single-row casts (`LibSqlRow → SessionRow`, `MemoryRow`, etc.) now use the `as unknown as T` double-cast pattern, fixing TypeScript strict-mode errors.
 - **`PostgresAgentDb`** — `close()` method was accidentally stripped during a refactor; restored.
+- **Unified class API** — `SimpleAgent` and `LegacyAgent` were removed from public exports; `Agent` is now the only class-based API and includes both legacy defaults and modern fluent methods.
+- **Durable runtime lifecycle correctness** — resume now rejects terminal workflows consistently; terminal-state handling no longer allows invalid resume paths.
+- **CQRS error propagation** — event-bus handler failures are now surfaced via `AggregateError` after handlers run.
+- **State machine lifecycle hardening** — `start()` is idempotent; transition commits in `send()` and `jumpTo()` are atomic (state changes apply only after target `onEntry` succeeds).
+- **Snapshot restore semantics** — snapshots persist startup status (`started`); restore defaults legacy snapshots to started to avoid duplicate initial `onEntry` execution.
 
 ---
 

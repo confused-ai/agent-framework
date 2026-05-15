@@ -502,6 +502,9 @@
   "devDependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1036.0",
     "@types/bun": "latest",
+    "@types/form-data": "^2.5.2",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node-fetch": "^2.6.13",
     "@types/uuid": "^9.0.8",
     "@typescript-eslint/parser": "^8.59.0",
     "@vitest/coverage-v8": "^4.0.18",

@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1778501716590,
+  "lastScanned": 1778823871573,
   "projectRoot": "/Users/rvuyyuru/Desktop/ag-code/agent-framework",
   "techStack": {
     "languages": [
@@ -53,6 +53,8 @@
       "example:scheduled": "bun examples/scheduled-agent.ts",
       "example:code-review": "bun examples/code-review-pipeline.ts",
       "example:eval": "bun examples/eval-regression.ts",
+      "example:agno-vs": "bun examples/agno-vs-confused-ai.ts",
+      "example:agno-server": "python3 examples/run_agno_server.py",
       "build": "bun run build:root",
       "build:root": "tsup && node scripts/gen-root-dts.mjs",
       "build:packages": "turbo run build --filter='@confused-ai/*' --output-logs=errors-only",
@@ -91,10 +93,7 @@
   },
   "structure": {
     "isMonorepo": true,
-    "workspaces": [
-      "packages/*",
-      "packages/*/*"
-    ],
+    "workspaces": [],
     "mainDirectories": [
       "docs",
       "examples",
@@ -113,7 +112,7 @@
       "path": "benchmarks",
       "purpose": null,
       "fileCount": 4,
-      "lastAccessed": 1778501716575,
+      "lastAccessed": 1778823871506,
       "keyFiles": [
         "event-store.bench.ts",
         "executor.bench.ts",
@@ -124,21 +123,21 @@
     "dist": {
       "path": "dist",
       "purpose": "Distribution/build output",
-      "fileCount": 211,
-      "lastAccessed": 1778501716580,
+      "fileCount": 156,
+      "lastAccessed": 1778823871548,
       "keyFiles": [
         "adapter-redis.cjs",
-        "adapter-redis.cjs.map",
+        "adapter-redis.d.ts",
         "adapter-redis.js",
-        "adapter-redis.js.map",
-        "adapters.cjs"
+        "adapters.cjs",
+        "adapters.d.ts"
       ]
     },
     "docs": {
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 4,
-      "lastAccessed": 1778501716580,
+      "lastAccessed": 1778823871550,
       "keyFiles": [
         "changelog.md",
         "index.md",
@@ -149,28 +148,21 @@
     "examples": {
       "path": "examples",
       "purpose": "Example code",
-      "fileCount": 14,
-      "lastAccessed": 1778501716581,
+      "fileCount": 18,
+      "lastAccessed": 1778823871553,
       "keyFiles": [
+        "agno-vs-confused-ai.ts",
+        "agno_server.py",
         "chat-ui.html",
         "code-review-pipeline.ts",
-        "eval-regression.ts",
-        "framework-showcase.ts",
-        "graph-workflow.ts"
+        "eval-regression.ts"
       ]
-    },
-    "packages": {
-      "path": "packages",
-      "purpose": null,
-      "fileCount": 0,
-      "lastAccessed": 1778501716581,
-      "keyFiles": []
     },
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
-      "fileCount": 11,
-      "lastAccessed": 1778501716581,
+      "fileCount": 12,
+      "lastAccessed": 1778823871554,
       "keyFiles": [
         "build-dts.mjs",
         "check-bundle-size.mjs",
@@ -183,7 +175,7 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 12,
-      "lastAccessed": 1778501716581,
+      "lastAccessed": 1778823871555,
       "keyFiles": [
         "agent.ts",
         "create-agent.ts",
@@ -192,18 +184,11 @@
         "lite.ts"
       ]
     },
-    "temp_videos": {
-      "path": "temp_videos",
-      "purpose": null,
-      "fileCount": 0,
-      "lastAccessed": 1778501716582,
-      "keyFiles": []
-    },
     "templates": {
       "path": "templates",
       "purpose": null,
       "fileCount": 7,
-      "lastAccessed": 1778501716582,
+      "lastAccessed": 1778823871555,
       "keyFiles": [
         "Dockerfile",
         "README.md",
@@ -216,7 +201,7 @@
       "path": "tests",
       "purpose": "Test files",
       "fileCount": 27,
-      "lastAccessed": 1778501716583,
+      "lastAccessed": 1778823871562,
       "keyFiles": [
         "agentic-runner.test.ts",
         "artifact.test.ts",
@@ -229,7 +214,7 @@
       "path": "docs/api",
       "purpose": "API routes",
       "fileCount": 5,
-      "lastAccessed": 1778501716584,
+      "lastAccessed": 1778823871565,
       "keyFiles": [
         "agent.md",
         "knowledge.md",
@@ -240,7 +225,7 @@
       "path": "docs/examples",
       "purpose": "Example code",
       "fileCount": 23,
-      "lastAccessed": 1778501716584,
+      "lastAccessed": 1778823871567,
       "keyFiles": [
         "01-hello-world.md",
         "02-custom-tool.md",
@@ -251,7 +236,7 @@
       "path": "docs/public",
       "purpose": "Public files",
       "fileCount": 3,
-      "lastAccessed": 1778501716584,
+      "lastAccessed": 1778823871568,
       "keyFiles": [
         "favicon.svg",
         "logo.svg",
@@ -262,14 +247,14 @@
       "path": "docs/src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1778501716584,
+      "lastAccessed": 1778823871568,
       "keyFiles": []
     },
     "examples/data": {
       "path": "examples/data",
       "purpose": "Data files",
       "fileCount": 6,
-      "lastAccessed": 1778501716585,
+      "lastAccessed": 1778823871571,
       "keyFiles": [
         "persona-agent-meta.json",
         "persona-agent-sessions.db",
@@ -279,10 +264,12 @@
     "src/config": {
       "path": "src/config",
       "purpose": "Configuration files",
-      "fileCount": 1,
-      "lastAccessed": 1778501716585,
+      "fileCount": 5,
+      "lastAccessed": 1778823871572,
       "keyFiles": [
-        "index.ts"
+        "index.ts",
+        "loader.ts",
+        "secret-manager.ts"
       ]
     }
   },

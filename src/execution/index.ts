@@ -78,3 +78,32 @@ export type {
     EngineEventPayload,
     EngineEventType,
 } from './engine-v2.js';
+
+// Durable Execution Engine (P0)
+export {
+    DurableRuntime,
+    DurableWorkflowContext,
+    InMemoryEventStore,
+    WorkflowPausedError,
+    WorkflowStateError,
+} from './durable.js';
+export type {
+    WorkflowEventType,
+    WorkflowEvent,
+    EventStore,
+    DurableRetryPolicy,
+    WorkflowFunction,
+} from './durable.js';
+
+// Lightweight Agent State Machine (P1)
+export {
+    AgentStateMachine,
+    stateMachine,
+} from './state-machine.js';
+export type {
+    AgentLifecycleState,
+    StateHandler,
+    StateMachineConfig,
+    StateMachineOptions,
+    StateMachineSnapshot,
+} from './state-machine.js';

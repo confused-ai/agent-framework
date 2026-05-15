@@ -32,6 +32,26 @@ export * from './core/load-balancer.js';
 export * from './core/mcp-types.js';
 export * from './core/toolkit.js';
 export * from './core/agent-adapter.js';
+// actor: explicit to avoid name collisions
+export { Actor, ActorSystem } from './core/actor.js';
+export type { ActorConfig, ActorMessage, ActorMessageType } from './core/actor.js';
+// cqrs: explicit — EventHandler aliased to avoid conflict with event-bus.js
+export {
+    CommandBus,
+    EventBus,
+} from './core/cqrs.js';
+export type {
+    Command,
+    DomainEvent,
+    CommandHandler,
+    EventHandler as CQRSEventHandler,
+    StartWorkflowPayload,
+    ExecuteToolPayload,
+    PauseWorkflowPayload,
+    WorkflowStartedPayload,
+    ToolExecutedPayload,
+    WorkflowRecoveredPayload,
+} from './core/cqrs.js';
 
 // ── Multi-agent patterns ───────────────────────────────────────────────────
 export * from './multi-agent/team.js';

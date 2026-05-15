@@ -1,4 +1,5 @@
 # confused-ai
+<a href="https://www.producthunt.com/products/confused-ai?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-confused-ai" target="_blank" rel="noopener noreferrer"><img alt="confused-ai - Build AI agents, teams, and workflows in TypeScript | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1146700&theme=light&t=1778823847031"></a>
 
 `confused-ai` is a TypeScript agent framework built around one stable install story: start with a single package, ship one useful agent, then layer tools, retrieval, sessions, serving, orchestration, and production controls without changing frameworks midway through the project.
 
